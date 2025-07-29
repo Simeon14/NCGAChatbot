@@ -85,11 +85,11 @@ class NCGAChatbot:
                 # Calculate base score
                 base_score = 5.0
                 
-                # Boost policy documents significantly
+                # Boost policy documents moderately
                 if page.get('type') == 'policy':
-                    base_score = 15.0  # 3x boost for policy documents
+                    base_score = 10.0  # 2x boost for policy documents
                 elif page.get('type') == 'article':
-                    base_score = 3.0   # Reduce article priority
+                    base_score = 4.0   # Slightly reduce article priority
                 
                 relevant_content.append({
                     'title': title,
@@ -113,11 +113,11 @@ class NCGAChatbot:
                     # Calculate base score
                     base_score = word_matches + title_matches
                     
-                    # Boost policy documents significantly
+                    # Boost policy documents moderately
                     if page.get('type') == 'policy':
-                        base_score = base_score * 3  # 3x boost for policy documents
+                        base_score = base_score * 2  # 2x boost for policy documents
                     elif page.get('type') == 'article':
-                        base_score = base_score * 0.5  # Reduce article priority
+                        base_score = base_score * 0.8  # Slightly reduce article priority
                     
                     relevant_content.append({
                         'title': title,
