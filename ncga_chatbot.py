@@ -21,8 +21,8 @@ class NCGAChatbot:
         self.training_data = []
         self.load_training_data()
     
-    def load_training_data(self, pages_file: str = 'ncga_cleaned_evidence_content.json', articles_file: str = 'ncga_articles.json'):
-        """Load both the evidence-paired training data and articles"""
+    def load_training_data(self, pages_file: str = 'ncga_cleaned_evidence_content.json', articles_file: str = 'ncga_articles.json', policy_file: str = 'ncga_policy_content.json'):
+        """Load evidence-paired training data, articles, and policy documents"""
         self.training_data = []
         
         # Load pages data
@@ -50,6 +50,15 @@ class NCGAChatbot:
         else:
             print(f"⚠️ {articles_file} not found")
         
+        # Load policy data
+        if os.path.exists(policy_file):
+            with open(policy_file, 'r', encoding='utf-8') as f:
+                policy_data = json.load(f)
+                self.training_data.extend(policy_data)
+            print(f"✅ Loaded {len(policy_data)} policy sections")
+        else:
+            print(f"⚠️ {policy_file} not found")
+        
         print(f"📚 Total training data: {len(self.training_data)} items")
     
     def search_relevant_content(self, query: str, top_k: int = 1) -> List[Dict]:
@@ -73,11 +82,21 @@ class NCGAChatbot:
             
             # Check for exact phrase match first
             if query_lower in content_lower or query_lower in title_lower:
+                # Calculate base score
+                base_score = 5.0
+                
+                # Boost policy documents significantly
+                if page.get('type') == 'policy':
+                    base_score = 15.0  # 3x boost for policy documents
+                elif page.get('type') == 'article':
+                    base_score = 3.0   # Reduce article priority
+                
                 relevant_content.append({
                     'title': title,
                     'url': page.get('url', ''),
                     'content': content,
-                    'relevance_score': 5.0
+                    'type': page.get('type', 'page'),
+                    'relevance_score': base_score
                 })
             else:
                 # Check for meaningful word matches
@@ -91,11 +110,21 @@ class NCGAChatbot:
                         title_matches += 2  # Title matches are more important
                 
                 if word_matches > 0:
+                    # Calculate base score
+                    base_score = word_matches + title_matches
+                    
+                    # Boost policy documents significantly
+                    if page.get('type') == 'policy':
+                        base_score = base_score * 3  # 3x boost for policy documents
+                    elif page.get('type') == 'article':
+                        base_score = base_score * 0.5  # Reduce article priority
+                    
                     relevant_content.append({
                         'title': title,
                         'url': page.get('url', ''),
                         'content': content,
-                        'relevance_score': word_matches + title_matches
+                        'type': page.get('type', 'page'),
+                        'relevance_score': base_score
                     })
         
         # Sort by relevance and return top results
@@ -110,6 +139,8 @@ class NCGAChatbot:
             item_type = item.get('type', 'page')
             if item_type == 'article':
                 context += f"ARTICLE: {item['title']}\n"
+            elif item_type == 'policy':
+                context += f"POLICY DOCUMENT: {item['title']}\n"
             else:
                 context += f"PAGE: {item['title']}\n"
             context += f"URL: {item['url']}\n"
