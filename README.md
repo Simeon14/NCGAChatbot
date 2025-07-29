@@ -7,7 +7,7 @@ A web-based chatbot trained on National Corn Growers Association (NCGA) informat
 - **Evidence-backed responses** - All information is sourced from NCGA content
 - **Web interface** - Easy to use on any device
 - **Secure API handling** - Users provide their own OpenAI API keys
-- **Comprehensive knowledge** - Trained on 20+ NCGA pages and articles
+- **Comprehensive knowledge** - Trained on 724 items (20 main pages + 704 articles)
 
 ## Topics Covered
 
@@ -37,7 +37,8 @@ A web-based chatbot trained on National Corn Growers Association (NCGA) informat
 
 - `app.py` - Streamlit web application
 - `ncga_chatbot.py` - Core chatbot logic
-- `ncga_cleaned_evidence_content.json` - Training data (20 pages)
+- `ncga_cleaned_evidence_content.json` - Main pages training data (20 pages)
+- `ncga_articles.json` - Articles training data (704 articles)
 - `requirements_streamlit.txt` - Python dependencies
 
 ## Deployment
