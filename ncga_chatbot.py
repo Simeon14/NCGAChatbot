@@ -21,16 +21,36 @@ class NCGAChatbot:
         self.training_data = []
         self.load_training_data()
     
-    def load_training_data(self, data_file: str = 'ncga_cleaned_evidence_content.json'):
-        """Load the evidence-paired training data"""
-        if not os.path.exists(data_file):
-            print(f"❌ {data_file} not found")
-            return
+    def load_training_data(self, pages_file: str = 'ncga_cleaned_evidence_content.json', articles_file: str = 'ncga_articles.json'):
+        """Load both the evidence-paired training data and articles"""
+        self.training_data = []
         
-        with open(data_file, 'r', encoding='utf-8') as f:
-            self.training_data = json.load(f)
+        # Load pages data
+        if os.path.exists(pages_file):
+            with open(pages_file, 'r', encoding='utf-8') as f:
+                pages_data = json.load(f)
+                self.training_data.extend(pages_data)
+            print(f"✅ Loaded {len(pages_data)} pages of training data")
+        else:
+            print(f"⚠️ {pages_file} not found")
         
-        print(f"✅ Loaded {len(self.training_data)} pages of training data")
+        # Load articles data
+        if os.path.exists(articles_file):
+            with open(articles_file, 'r', encoding='utf-8') as f:
+                articles_data = json.load(f)
+                # Convert articles to same format as pages
+                for article in articles_data:
+                    self.training_data.append({
+                        'title': article.get('title', ''),
+                        'url': article.get('link', ''),
+                        'cleaned_evidence_content': article.get('content', ''),
+                        'type': 'article'
+                    })
+            print(f"✅ Loaded {len(articles_data)} articles")
+        else:
+            print(f"⚠️ {articles_file} not found")
+        
+        print(f"📚 Total training data: {len(self.training_data)} items")
     
     def search_relevant_content(self, query: str, top_k: int = 3) -> List[Dict]:
         """Search for relevant content based on user query"""
@@ -81,7 +101,11 @@ class NCGAChatbot:
         context = "Based on the following NCGA (National Corn Growers Association) information:\n\n"
         
         for item in relevant_content:
-            context += f"PAGE: {item['title']}\n"
+            item_type = item.get('type', 'page')
+            if item_type == 'article':
+                context += f"ARTICLE: {item['title']}\n"
+            else:
+                context += f"PAGE: {item['title']}\n"
             context += f"URL: {item['url']}\n"
             context += f"CONTENT:\n{item['content']}\n\n"
         
