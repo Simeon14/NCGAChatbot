@@ -100,4 +100,4 @@ if st.sidebar.button("🗑️ Clear Chat"):
 
 # Footer
 st.sidebar.markdown("---")
-st.sidebar.markdown("Built with Streamlit and OpenAI") 
+st.sidebar.markdown("Built with Streamlit and OpenAI") # Test comment
