@@ -52,13 +52,16 @@ class NCGAChatbot:
         
         print(f"📚 Total training data: {len(self.training_data)} items")
     
-    def search_relevant_content(self, query: str, top_k: int = 3) -> List[Dict]:
+    def search_relevant_content(self, query: str, top_k: int = 1) -> List[Dict]:
         """Search for relevant content based on user query"""
         relevant_content = []
         
         # Simple keyword matching (you could use more sophisticated search)
         query_lower = query.lower()
         query_words = query_lower.split()
+        
+        # Filter out common words that don't add meaning
+        meaningful_words = [word for word in query_words if len(word) > 2 and word not in ['what', 'is', 'are', 'the', 'and', 'for', 'with', 'about', 'from', 'this', 'that', 'they', 'have', 'been', 'will', 'would', 'could', 'should']]
         
         for page in self.training_data:
             content = page.get('cleaned_evidence_content', '')
@@ -74,22 +77,25 @@ class NCGAChatbot:
                     'title': title,
                     'url': page.get('url', ''),
                     'content': content,
-                    'relevance_score': 2.0
+                    'relevance_score': 5.0
                 })
             else:
-                # Check for individual word matches
+                # Check for meaningful word matches
                 word_matches = 0
-                for word in query_words:
-                    if len(word) > 2:  # Only count words longer than 2 characters
-                        if word in content_lower or word in title_lower:
-                            word_matches += 1
+                title_matches = 0
+                
+                for word in meaningful_words:
+                    if word in content_lower:
+                        word_matches += 1
+                    if word in title_lower:
+                        title_matches += 2  # Title matches are more important
                 
                 if word_matches > 0:
                     relevant_content.append({
                         'title': title,
                         'url': page.get('url', ''),
                         'content': content,
-                        'relevance_score': word_matches
+                        'relevance_score': word_matches + title_matches
                     })
         
         # Sort by relevance and return top results
@@ -141,7 +147,7 @@ Please provide a helpful, accurate response based on the evidence above. If you 
 """
             
             response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4o",
                 messages=[
                     {"role": "system", "content": "You are a helpful AI assistant that provides accurate information based on evidence. Always cite your sources and be direct in your responses. If you find relevant evidence, present it clearly."},
                     {"role": "user", "content": prompt}
