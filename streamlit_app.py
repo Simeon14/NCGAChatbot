@@ -11,7 +11,7 @@ st.set_page_config(
 
 # Title and description
 st.title("🌽 NCGA Chatbot")
-st.markdown("Ask me about corn farming, ethanol, trade policy, or other NCGA topics!")
+st.markdown("Ask me about corn farming, sustainability, trade policy, or other NCGA topics!")
 
 # Sidebar for API key
 with st.sidebar:
@@ -32,6 +32,13 @@ with st.sidebar:
         st.stop()
     
     st.success("✅ API key configured!")
+    
+    # Add Reset API Key button
+    if st.button("🔄 Reset API Key"):
+        # Clear the session state
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.rerun()
     
     # About section
     st.header("ℹ️ About")
@@ -75,14 +82,14 @@ if prompt := st.chat_input("Ask me about NCGA topics..."):
                 relevant = st.session_state.chatbot.search_relevant_content(prompt)
                 
                 if relevant:
-                    with st.spinner("📚 Found relevant information, generating response..."):
+                    with st.spinner("📚 Thinking..."):
                         response = st.session_state.chatbot.generate_response(
                             prompt, 
                             relevant,
                             st.session_state.messages[:-1]  # Pass all previous messages except current query
                         )
                 else:
-                    response = "I don't have specific information about that topic in my NCGA training data. Please try asking about corn farming, ethanol, trade policy, or other NCGA-related topics."
+                    response = "I don't have specific information about that topic in my NCGA training data. Please try asking about corn farming, sustainability, trade policy, or other NCGA-related topics."
                 
                 st.markdown(response)
                 

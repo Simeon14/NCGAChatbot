@@ -29,6 +29,45 @@ class NCGAChatbot:
             'position': ['stance', 'policy', 'view', 'opinion', 'position', 'statement', 'perspective'],
             'policy': ['stance', 'position', 'regulation', 'rule', 'guideline', 'framework', 'legislation', 'mandate'],
             
+            # Soil and Land Management
+            'soil': ['dirt', 'earth', 'ground', 'land', 'topsoil'],
+            'fertilizer': ['nutrient', 'fertilisation', 'plant food', 'manure', 'compost'],
+            'irrigation': ['watering', 'sprinkler', 'water management', 'drainage'],
+            'tillage': ['plowing', 'cultivation', 'no-till', 'minimum till'],
+            
+            # Weather and Climate
+            'drought': ['dry spell', 'water shortage', 'arid conditions'],
+            'precipitation': ['rainfall', 'rain', 'moisture', 'snow', 'water'],
+            'flood': ['flooding', 'water damage', 'overflow', 'inundation'],
+            
+            # Farm Equipment and Technology
+            'equipment': ['machinery', 'tools', 'implements', 'farm equipment'],
+            'precision': ['precision farming', 'precision agriculture', 'smart farming', 'digital farming'],
+            'gps': ['navigation', 'guidance', 'positioning', 'satellite'],
+            
+            # Disease and Pest Management
+            'pest': ['insect', 'bug', 'parasite', 'infestation'],
+            'disease': ['blight', 'rust', 'infection', 'pathogen'],
+            'herbicide': ['weed killer', 'weed control', 'chemical control'],
+            'pesticide': ['insecticide', 'pest control', 'crop protection'],
+            
+            # Market and Economic
+            'commodity': ['crop', 'product', 'goods', 'agricultural product'],
+            'futures': ['futures market', 'futures contract', 'forward contract'],
+            'subsidy': ['support', 'payment', 'assistance', 'aid'],
+            'tariff': ['duty', 'tax', 'import tax', 'trade barrier'],
+            
+            # Sustainability and Environmental
+            'organic': ['natural', 'chemical-free', 'biological'],
+            'biodiversity': ['diversity', 'ecosystem', 'species diversity'],
+            'sequestration': ['carbon capture', 'carbon storage', 'co2 storage'],
+            'watershed': ['drainage basin', 'catchment', 'water system'],
+            
+            # Processing and Value-Added
+            'processing': ['milling', 'refining', 'manufacturing', 'production'],
+            'byproduct': ['coproduct', 'derivative', 'secondary product'],
+            'value_added': ['processed', 'enhanced', 'upgraded'],
+            
             # News and Updates
             'latest': ['recent', 'new', 'current', 'update', 'breaking', 'newest', 'today', 'recent'],
             'news': ['update', 'announcement', 'development', 'report', 'information', 'release'],
@@ -51,7 +90,8 @@ class NCGAChatbot:
             
             # Energy and Biofuels
             'ethanol': ['biofuel', 'renewable fuel', 'fuel', 'bioethanol', 'corn ethanol', 'renewable'],
-            'biofuel': ['ethanol', 'renewable fuel', 'alternative fuel', 'clean fuel', 'green fuel'],
+            'biofuel': ['ethanol', 'renewable fuel', 'alternative fuel', 'clean fuel', 'green fuel', 'biodiesel'],
+            'biodiesel': ['biofuel', 'renewable fuel', 'alternative fuel', 'clean fuel', 'green fuel'],
             'renewable': ['sustainable', 'green', 'alternative', 'clean', 'bio-based'],
             'fuel': ['ethanol', 'biofuel', 'energy', 'power'],
             
@@ -237,12 +277,30 @@ Examples:
         # Expand query terms with synonyms
         expanded_terms = set()
         primary_terms = set()  # Track original query terms for boosting
+        
+        # First, create a reverse mapping of values to keys
+        reverse_synonyms = {}
+        for key, values in self.synonyms.items():
+            for value in values:
+                if value not in reverse_synonyms:
+                    reverse_synonyms[value] = set()
+                reverse_synonyms[value].add(key)
+        
         for term in query_terms:
             expanded_terms.add(term)
             primary_terms.add(term)
-            for key, values in self.synonyms.items():
-                if term in values or term == key:
-                    expanded_terms.update(values)
+            
+            # Forward lookup: term is a key in synonyms
+            if term in self.synonyms:
+                expanded_terms.update(self.synonyms[term])
+                
+            # Reverse lookup: term is a value in someone's synonym list
+            if term in reverse_synonyms:
+                # Add all the keys that have this term as a value
+                for key in reverse_synonyms[term]:
+                    expanded_terms.add(key)
+                    # Also add all other values for those keys
+                    expanded_terms.update(self.synonyms[key])
         
         for page in self.training_data:
             content = page.get('cleaned_evidence_content', '').lower()
