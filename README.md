@@ -35,11 +35,13 @@ A web-based chatbot trained on National Corn Growers Association (NCGA) informat
 
 ## Files
 
-- `app.py` - Streamlit web application
+- `README.md` - Project documentation
+- `ncga_articles.json` - Articles training data (704 articles)
 - `ncga_chatbot.py` - Core chatbot logic
 - `ncga_cleaned_evidence_content.json` - Main pages training data (20 pages)
-- `ncga_articles.json` - Articles training data (704 articles)
-- `requirements_streamlit.txt` - Python dependencies
+- `ncga_policy_content.json` - Policy documents training data (56 sections)
+- `requirements.txt` - Python dependencies
+- `streamlit_app.py` - Streamlit web application
 
 ## Deployment
 
