@@ -4,32 +4,20 @@ A web-based chatbot trained on National Corn Growers Association (NCGA) informat
 
 ## Features
 
-- **Evidence-backed responses** - All information is sourced from NCGA content
+- **Evidence-backed responses** - All information is cited from NCGA content
 - **Web interface** - Easy to use on any device
 - **Secure API handling** - Users provide their own OpenAI API keys
-- **Comprehensive knowledge** - Trained on 724 items (20 main pages + 704 articles)
-
-## Topics Covered
-
-- Corn farming practices
-- Ethanol production and policy
-- Trade policy and market development
-- Federal tax policy for farmers
-- Farm bill priorities
-- Animal agriculture
-- Carbon markets and sustainability
-- And more!
+- **Comprehensive knowledge** - Expert on all things NCGA
 
 ## How to Use
 
 1. Visit the deployed app URL
 2. Enter your OpenAI API key in the sidebar
-3. Start asking questions about NCGA topics!
+3. Start asking questions about NCGA / related topics!
 
 ## Technical Details
 
-- Built with Streamlit
-- Uses OpenAI GPT-3.5-turbo for response generation
+- Uses OpenAI GPT-4o for response generation
 - RAG (Retrieval-Augmented Generation) architecture
 - Evidence matching to prevent hallucinations
 
