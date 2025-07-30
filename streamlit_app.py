@@ -37,14 +37,6 @@ with st.sidebar:
     st.header("ℹ️ About")
     st.markdown("""
     This chatbot is trained on NCGA (National Corn Growers Association) information.
-    
-    **Topics covered:**
-    - Corn farming practices
-    - Ethanol production
-    - Trade policy
-    - Sustainability
-    - Farm bill priorities
-    - And more!
     """)
 
 # Initialize chatbot
