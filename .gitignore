@@ -61,4 +61,7 @@ test_*.py
 # Database files
 *.db
 feedback.db
-feedback_export.json 
+feedback_export.json
+
+# Google Sheets setup (private)
+GOOGLE_SHEETS_SETUP.md 
