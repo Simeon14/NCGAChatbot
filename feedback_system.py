@@ -15,14 +15,18 @@ class FeedbackSystem:
     def __init__(self, db_path: str = None):
         """Initialize the feedback system with database connection"""
         if db_path is None:
-            # Try to find the database in the data directory relative to the deploy folder
+            # For cloud deployment, use a simple path in the current directory
+            # For local development, try to use the data directory
             current_dir = os.path.dirname(os.path.abspath(__file__))
-            # Go up one level to NCGA directory, then into data folder
-            data_dir = os.path.join(os.path.dirname(current_dir), 'data')
+            
+            # Try to create data directory relative to current directory
+            data_dir = os.path.join(current_dir, 'data')
             db_path = os.path.join(data_dir, 'feedback.db')
             
             # Create data directory if it doesn't exist
             os.makedirs(data_dir, exist_ok=True)
+            
+            print(f"Using database path: {db_path}")
         
         self.db_path = db_path
         self.conn = sqlite3.connect(self.db_path)
