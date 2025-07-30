@@ -187,6 +187,7 @@ Content Types:
    - Regulations and standards
    - Long-term initiatives and programs
    - Environmental and sustainability practices, regulations, and policies
+   - Climate change, carbon sequestration, and environmental initiatives
    - Industry guidelines and frameworks
    - Government relations and advocacy
 
@@ -219,6 +220,7 @@ Return ONLY a JSON object with these exact keys and float values 0-1 representin
 
 Examples:
 "What's NCGA's position on carbon credits?" → {{"policy": 0.9, "news": 0.2, "general": 0.3, "other": 0.0}}
+"climate change" → {{"policy": 0.9, "news": 0.1, "general": 0.8, "other": 0.0}}
 "What happened at yesterday's corn price meeting?" → {{"policy": 0.2, "news": 0.9, "general": 0.2, "other": 0.0}}
 "How do I apply sustainable farming practices?" → {{"policy": 0.7, "news": 0.1, "general": 0.9, "other": 0.0}}
 "When was NCGA founded?" → {{"policy": 0.0, "news": 0.0, "general": 1.0, "other": 0.1}}
