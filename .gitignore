@@ -56,4 +56,9 @@ Thumbs.db
 
 # Test files
 test/
-test_*.py 
+test_*.py
+
+# Database files
+*.db
+feedback.db
+feedback_export.json 

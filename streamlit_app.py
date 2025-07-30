@@ -1,6 +1,8 @@
 import streamlit as st
 import os
+import time
 from ncga_chatbot import NCGAChatbot
+from feedback_system import render_feedback_buttons, render_feedback_dashboard
 
 # Page configuration
 st.set_page_config(
@@ -8,6 +10,10 @@ st.set_page_config(
     page_icon="🌽",
     layout="wide"
 )
+
+# Initialize session state for feedback
+if 'show_feedback_form' not in st.session_state:
+    st.session_state.show_feedback_form = False
 
 # Title and description
 st.title("🌽 NCGA Chatbot")
@@ -18,27 +24,36 @@ with st.sidebar:
     st.header("🔑 Setup")
     st.markdown("Enter your OpenAI API key to get started.")
     
+    # Initialize session state for API key
+    if 'api_key_input' not in st.session_state:
+        st.session_state.api_key_input = ""
+    if 'show_api_input' not in st.session_state:
+        st.session_state.show_api_input = False
+    
     # Get API key from secrets or user input
     try:
         api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
     except:
         api_key = os.getenv("OPENAI_API_KEY")
     
-    if not api_key:
-        api_key = st.text_input("OpenAI API Key:", type="password", help="Get your API key from https://platform.openai.com/api-keys")
+    # Show API key input or success message
+    if not api_key or st.session_state.show_api_input:
+        api_key = st.text_input("OpenAI API Key:", type="password", help="Get your API key from https://platform.openai.com/api-keys", value=st.session_state.api_key_input, key="api_key_input")
+    else:
+        st.success("✅ API key configured!")
+        if st.button("🔄 Reset API Key"):
+            # Clear the API key and session state
+            st.session_state.api_key_input = ""
+            st.session_state.show_api_input = True
+            # Clear other session state
+            for key in list(st.session_state.keys()):
+                if key not in ['api_key_input', 'show_api_input']:
+                    del st.session_state[key]
+            st.rerun()
     
     if not api_key:
         st.warning("⚠️ Please enter your OpenAI API key to continue")
         st.stop()
-    
-    st.success("✅ API key configured!")
-    
-    # Add Reset API Key button
-    if st.button("🔄 Reset API Key"):
-        # Clear the session state
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.rerun()
     
     # About section
     st.header("ℹ️ About")
@@ -75,10 +90,12 @@ if prompt := st.chat_input("Ask me about NCGA topics..."):
     with st.chat_message("user"):
         st.markdown(prompt)
     
-    # Generate response
+    # Generate response with timing
     with st.chat_message("assistant"):
         with st.spinner("🤔 Searching for information..."):
             try:
+                start_time = time.time()
+                
                 relevant = st.session_state.chatbot.search_relevant_content(prompt)
                 
                 if relevant:
@@ -91,16 +108,56 @@ if prompt := st.chat_input("Ask me about NCGA topics..."):
                 else:
                     response = "I don't have specific information about that topic in my NCGA training data. Please try asking about corn farming, sustainability, trade policy, or other NCGA-related topics."
                 
+                end_time = time.time()
+                response_time_ms = int((end_time - start_time) * 1000)
+                
                 st.markdown(response)
                 
                 # Add assistant response to chat history
                 st.session_state.messages.append({"role": "assistant", "content": response})
+                
+                # Store last query and response for feedback
+                st.session_state.last_query = prompt
+                st.session_state.last_response = response
+                
+                # Get session ID for tracking
+                session_id = str(hash(st.session_state.get('_session_id', time.time())))
+                
+                # Extract sources used (if available)
+                sources_used = []
+                if relevant:
+                    for item in relevant:
+                        sources_used.append({
+                            'title': item.get('title', ''),
+                            'url': item.get('url', ''),
+                            'type': item.get('type', 'page')
+                        })
+                
+                # Get model used
+                model_used = "gpt-4o"  # Update this if you change models
                 
             except Exception as e:
                 error_msg = f"Sorry, I encountered an error: {str(e)}"
                 st.error(error_msg)
                 st.session_state.messages.append({"role": "assistant", "content": error_msg})
 
-# Footer
-st.sidebar.markdown("---")
-st.sidebar.markdown("Built with Streamlit and OpenAI") # Test comment
+# Global feedback buttons in sidebar (outside chat context)
+if 'last_response' in st.session_state and 'last_query' in st.session_state:
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("**Feedback:**")
+    
+    if st.sidebar.button("👍 Like Last Response", key="like_last"):
+        print("DEBUG: Like last response clicked!")
+        from feedback_system import FeedbackSystem
+        fs = FeedbackSystem()
+        success = fs.save_feedback(st.session_state.last_query, st.session_state.last_response, 1)
+        print(f"DEBUG: Like save result: {success}")
+        st.sidebar.success("Like saved!")
+    
+    if st.sidebar.button("👎 Dislike Last Response", key="dislike_last"):
+        print("DEBUG: Dislike last response clicked!")
+        from feedback_system import FeedbackSystem
+        fs = FeedbackSystem()
+        success = fs.save_feedback(st.session_state.last_query, st.session_state.last_response, 0)
+        print(f"DEBUG: Dislike save result: {success}")
+        st.sidebar.success("Dislike saved!")
