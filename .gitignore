@@ -52,4 +52,8 @@ Thumbs.db
 
 # Temporary files
 *.tmp
-*.temp 
+*.temp
+
+# Test files
+test/
+test_*.py 
