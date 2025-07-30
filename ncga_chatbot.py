@@ -401,6 +401,7 @@ IMPORTANT RULES:
    - When you use information from a source, ALWAYS cite it with the exact URL from the context
    - Never cite or mention sources that don't contain relevant information
    - Format citations as: Source: (exact_url)
+   - If evidence exists but isn't relevant to the question, ignore it completely
 9. Be direct and helpful
 10. When no relevant information is found:
     - Simply state that you don't have the requested information
@@ -421,8 +422,7 @@ Examples of BAD responses:
 ❌ "The provided article from 2022 doesn't contain information about corn prices..."
 ❌ "While the source discusses ethanol production, it doesn't mention board members..."
 ❌ "Here's a link to an article that doesn't answer your question..."
-❌ "Source: [NCGA Ethanol Policy](url)" - wrong format
-❌ "According to the article..." - don't reference articles
+❌ "The source/article mentions [irrelevant information] but doesn't address your specific question..."
 
 User Question: {query}
 
