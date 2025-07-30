@@ -1,257 +1,158 @@
 #!/usr/bin/env python3
 """
 Feedback System for NCGA Chatbot
-Handles user ratings, database storage, and feedback analytics.
+Handles user ratings and saves to Google Sheets.
 """
 
-import sqlite3
-import json
-import os
+import gspread
+from google.oauth2.service_account import Credentials
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 import streamlit as st
+import os
 
 class FeedbackSystem:
-    def __init__(self, db_path: str = None):
-        """Initialize the feedback system with database connection"""
-        if db_path is None:
-            # For cloud deployment, use a simple path in the current directory
-            # For local development, try to use the data directory
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            
-            # Try to create data directory relative to current directory
-            data_dir = os.path.join(current_dir, 'data')
-            db_path = os.path.join(data_dir, 'feedback.db')
-            
-            # Create data directory if it doesn't exist
-            os.makedirs(data_dir, exist_ok=True)
-            
-            print(f"Using database path: {db_path}")
+    def __init__(self, credentials_file: str = None, sheet_id: str = None):
+        """Initialize the feedback system with Google Sheets connection"""
+        self.credentials_file = credentials_file
+        self.sheet_id = sheet_id or os.getenv('GOOGLE_SHEET_ID')
         
-        self.db_path = db_path
-        self.conn = sqlite3.connect(self.db_path)
-        self.init_database()
-    
-    def init_database(self):
-        """Initialize the SQLite database with feedback table"""
+        if not self.sheet_id:
+            print("⚠️ No Google Sheet ID provided. Feedback will not be saved.")
+            self.sheet = None
+            return
+            
         try:
-            cursor = self.conn.cursor()
+            # Set up Google Sheets API
+            scope = ['https://spreadsheets.google.com/feeds',
+                    'https://www.googleapis.com/auth/drive']
             
-            # Create feedback table
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS feedback (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    timestamp TEXT NOT NULL,
-                    user_query TEXT NOT NULL,
-                    chatbot_response TEXT NOT NULL,
-                    rating INTEGER NOT NULL,  -- 1 for like, 0 for dislike
-                    feedback_comment TEXT,
-                    session_id TEXT,
-                    response_time_ms INTEGER,
-                    sources_used TEXT,  -- JSON string of sources
-                    model_used TEXT,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
+            if credentials_file and os.path.exists(credentials_file):
+                creds = Credentials.from_service_account_file(credentials_file, scopes=scope)
+            else:
+                # Try to use environment variables for credentials
+                creds = Credentials.from_service_account_info({
+                    "type": "service_account",
+                    "project_id": os.getenv('GOOGLE_PROJECT_ID'),
+                    "private_key_id": os.getenv('GOOGLE_PRIVATE_KEY_ID'),
+                    "private_key": os.getenv('GOOGLE_PRIVATE_KEY', '').replace('\\n', '\n'),
+                    "client_email": os.getenv('GOOGLE_CLIENT_EMAIL'),
+                    "client_id": os.getenv('GOOGLE_CLIENT_ID'),
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                    "client_x509_cert_url": os.getenv('GOOGLE_CLIENT_X509_CERT_URL')
+                }, scopes=scope)
             
-            # Create index for faster queries
-            cursor.execute('''
-                CREATE INDEX IF NOT EXISTS idx_timestamp 
-                ON feedback(timestamp)
-            ''')
+            self.client = gspread.authorize(creds)
+            self.sheet = self.client.open_by_key(self.sheet_id).sheet1
             
-            cursor.execute('''
-                CREATE INDEX IF NOT EXISTS idx_rating 
-                ON feedback(rating)
-            ''')
+            # Initialize sheet headers if needed
+            self._init_sheet_headers()
             
-            self.conn.commit()
-            
-            print(f"Feedback database initialized: {self.db_path}")
+            print(f"✅ Connected to Google Sheet: {self.sheet.title}")
             
         except Exception as e:
-            print(f"Error initializing feedback database: {e}")
+            print(f"❌ Error connecting to Google Sheets: {e}")
+            self.sheet = None
     
-    def __del__(self):
-        """Clean up database connection"""
-        if hasattr(self, 'conn'):
-            self.conn.close()
+    def _init_sheet_headers(self):
+        """Initialize sheet headers if the sheet is empty"""
+        try:
+            headers = self.sheet.row_values(1)
+            if not headers:
+                # Add headers
+                headers = [
+                    'Timestamp', 'User Query', 'Chatbot Response', 'Rating', 
+                    'Session ID', 'Response Time (ms)', 'Sources Used', 'Model Used'
+                ]
+                self.sheet.append_row(headers)
+                print("✅ Initialized Google Sheet headers")
+        except Exception as e:
+            print(f"❌ Error initializing sheet headers: {e}")
     
     def save_feedback(self, user_query: str, chatbot_response: str, rating: int, 
                      session_id: str = None, response_time_ms: int = None, 
                      sources_used: str = None, model_used: str = None) -> bool:
-        """Save user feedback to the database"""
+        """Save user feedback to Google Sheets"""
+        if not self.sheet:
+            print("❌ No Google Sheet connection available")
+            return False
+            
         try:
-            # Check if an entry with the same query and response already exists
-            cursor = self.conn.cursor()
-            cursor.execute("""
-                SELECT id FROM feedback 
-                WHERE user_query = ? AND chatbot_response = ?
-            """, (user_query, chatbot_response))
+            # Prepare row data
+            row_data = [
+                datetime.now().isoformat(),
+                user_query,
+                chatbot_response,
+                'Like' if rating == 1 else 'Dislike',
+                session_id or '',
+                response_time_ms or '',
+                sources_used or '',
+                model_used or ''
+            ]
             
-            existing_entry = cursor.fetchone()
+            # Append to sheet
+            self.sheet.append_row(row_data)
             
-            if existing_entry:
-                # Update existing entry
-                cursor.execute("""
-                    UPDATE feedback 
-                    SET rating = ?, timestamp = ?, session_id = ?, 
-                        response_time_ms = ?, sources_used = ?, model_used = ?
-                    WHERE id = ?
-                """, (rating, datetime.now().isoformat(), session_id, 
-                      response_time_ms, sources_used, model_used, existing_entry[0]))
-                print(f"DEBUG: Updated existing feedback entry {existing_entry[0]} with rating {rating}")
-            else:
-                # Insert new entry
-                cursor.execute("""
-                    INSERT INTO feedback (user_query, chatbot_response, rating, timestamp, 
-                                       session_id, response_time_ms, sources_used, model_used)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """, (user_query, chatbot_response, rating, datetime.now().isoformat(),
-                      session_id, response_time_ms, sources_used, model_used))
-                print(f"DEBUG: Created new feedback entry with rating {rating}")
-            
-            self.conn.commit()
+            print(f"✅ Feedback saved to Google Sheets: {'Like' if rating == 1 else 'Dislike'}")
             return True
+            
         except Exception as e:
-            print(f"Error saving feedback: {e}")
+            print(f"❌ Error saving feedback: {e}")
             return False
     
     def get_feedback_stats(self) -> Dict:
-        """Get feedback statistics"""
+        """Get feedback statistics from Google Sheets"""
+        if not self.sheet:
+            return {}
+            
         try:
-            cursor = self.conn.cursor()
+            # Get all data
+            all_data = self.sheet.get_all_records()
             
-            # Total feedback count
-            cursor.execute("SELECT COUNT(*) FROM feedback")
-            total_feedback = cursor.fetchone()[0]
+            if not all_data:
+                return {'total_feedback': 0, 'likes': 0, 'dislikes': 0}
             
-            # Rating breakdown
-            cursor.execute("SELECT rating, COUNT(*) FROM feedback GROUP BY rating")
-            rating_breakdown = dict(cursor.fetchall())
+            total_feedback = len(all_data)
+            likes = sum(1 for row in all_data if row.get('Rating') == 'Like')
+            dislikes = sum(1 for row in all_data if row.get('Rating') == 'Dislike')
             
-            # Recent feedback (last 7 days)
-            cursor.execute('''
-                SELECT COUNT(*) FROM feedback 
-                WHERE timestamp >= datetime('now', '-7 days')
-            ''')
-            recent_feedback = cursor.fetchone()[0]
-            
-            # Average response time
-            cursor.execute('''
-                SELECT AVG(response_time_ms) FROM feedback 
-                WHERE response_time_ms IS NOT NULL
-            ''')
-            avg_response_time = cursor.fetchone()[0] or 0
+            satisfaction_rate = round(likes / max(total_feedback, 1) * 100, 1)
             
             return {
                 'total_feedback': total_feedback,
-                'likes': rating_breakdown.get(1, 0),
-                'dislikes': rating_breakdown.get(0, 0),
-                'recent_feedback': recent_feedback,
-                'avg_response_time_ms': round(avg_response_time, 2),
-                'satisfaction_rate': round(rating_breakdown.get(1, 0) / max(total_feedback, 1) * 100, 1)
+                'likes': likes,
+                'dislikes': dislikes,
+                'satisfaction_rate': satisfaction_rate
             }
             
         except Exception as e:
-            print(f"Error getting feedback stats: {e}")
+            print(f"❌ Error getting feedback stats: {e}")
             return {}
     
     def get_recent_feedback(self, limit: int = 10) -> List[Dict]:
-        """Get recent feedback entries"""
-        try:
-            cursor = self.conn.cursor()
-            
-            cursor.execute('''
-                SELECT timestamp, user_query, chatbot_response, rating, 
-                       feedback_comment, response_time_ms
-                FROM feedback 
-                ORDER BY timestamp DESC 
-                LIMIT ?
-            ''', (limit,))
-            
-            results = cursor.fetchall()
-            
-            feedback_list = []
-            for row in results:
-                feedback_list.append({
-                    'timestamp': row[0],
-                    'user_query': row[1],
-                    'chatbot_response': row[2],
-                    'rating': row[3],
-                    'feedback_comment': row[4],
-                    'response_time_ms': row[5]
-                })
-            
-            return feedback_list
-            
-        except Exception as e:
-            print(f"Error getting recent feedback: {e}")
+        """Get recent feedback entries from Google Sheets"""
+        if not self.sheet:
             return []
-    
-    def get_problematic_queries(self, min_dislikes: int = 2) -> List[Dict]:
-        """Get queries that received multiple dislikes"""
+            
         try:
-            cursor = self.conn.cursor()
+            # Get all data and return most recent
+            all_data = self.sheet.get_all_records()
             
-            cursor.execute('''
-                SELECT user_query, COUNT(*) as dislike_count,
-                       GROUP_CONCAT(chatbot_response, ' || ') as responses
-                FROM feedback 
-                WHERE rating = 0 
-                GROUP BY user_query 
-                HAVING COUNT(*) >= ?
-                ORDER BY dislike_count DESC
-            ''', (min_dislikes,))
+            # Sort by timestamp (assuming it's in the first column)
+            sorted_data = sorted(all_data, key=lambda x: x.get('Timestamp', ''), reverse=True)
             
-            results = cursor.fetchall()
-            
-            problematic_queries = []
-            for row in results:
-                problematic_queries.append({
-                    'query': row[0],
-                    'dislike_count': row[1],
-                    'responses': row[2].split(' || ')
-                })
-            
-            return problematic_queries
+            return sorted_data[:limit]
             
         except Exception as e:
-            print(f"Error getting problematic queries: {e}")
+            print(f"❌ Error getting recent feedback: {e}")
             return []
-    
-    def export_feedback_data(self, filepath: str = "feedback_export.json"):
-        """Export all feedback data to JSON file"""
-        try:
-            cursor = self.conn.cursor()
-            
-            cursor.execute('SELECT * FROM feedback')
-            results = cursor.fetchall()
-            
-            # Get column names
-            cursor.execute('PRAGMA table_info(feedback)')
-            columns = [col[1] for col in cursor.fetchall()]
-            
-            # Convert to list of dictionaries
-            data = []
-            for row in results:
-                data.append(dict(zip(columns, row)))
-            
-            # Save to JSON file
-            with open(filepath, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
-            
-            print(f"Feedback data exported to: {filepath}")
-            return True
-            
-        except Exception as e:
-            print(f"❌ Error exporting feedback data: {e}")
-            return False
 
 # Streamlit UI Components
 def render_feedback_buttons(user_query: str, chatbot_response: str, 
                           session_id: str = None, response_time_ms: int = None,
-                          sources_used: List[Dict] = None, model_used: str = None):
+                          sources_used: str = None, model_used: str = None):
     """Render like/dislike buttons in Streamlit"""
     
     # Initialize feedback system
@@ -331,29 +232,9 @@ def render_feedback_dashboard():
     
     if recent_feedback:
         for feedback in recent_feedback:
-            with st.expander(f"{feedback['timestamp'][:19]} - {'👍' if feedback['rating'] == 1 else '👎'}"):
-                st.write(f"**Query:** {feedback['user_query']}")
-                st.write(f"**Response:** {feedback['chatbot_response'][:200]}...")
-                if feedback['feedback_comment']:
-                    st.write(f"**Comment:** {feedback['feedback_comment']}")
+            with st.expander(f"{feedback.get('Timestamp', '')[:19]} - {'👍' if feedback.get('Rating') == 'Like' else '👎'}"):
+                st.write(f"**Query:** {feedback.get('User Query', '')}")
+                st.write(f"**Response:** {feedback.get('Chatbot Response', '')[:200]}...")
     
-    # Problematic queries
-    st.subheader("⚠️ Queries with Multiple Dislikes")
-    problematic_queries = feedback_system.get_problematic_queries()
-    
-    if problematic_queries:
-        for query_data in problematic_queries:
-            with st.expander(f"'{query_data['query']}' ({query_data['dislike_count']} dislikes)"):
-                st.write(f"**Query:** {query_data['query']}")
-                st.write("**Responses that received dislikes:**")
-                for i, response in enumerate(query_data['responses'][:3], 1):
-                    st.write(f"{i}. {response[:150]}...")
     else:
-        st.info("No queries with multiple dislikes found.")
-    
-    # Export button
-    if st.button("📥 Export Feedback Data"):
-        if feedback_system.export_feedback_data():
-            st.success("Feedback data exported successfully!")
-        else:
-            st.error("Failed to export feedback data.") 
+        st.info("No recent feedback found.") 
