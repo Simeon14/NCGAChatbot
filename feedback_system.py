@@ -80,27 +80,55 @@ class FeedbackSystem:
             return False
             
         try:
-            # Prepare row data
-            row_data = [
-                datetime.now().isoformat(),
-                user_query,
-                chatbot_response,
-                'Like' if rating == 1 else 'Dislike',
-                session_id or '',
-                response_time_ms or '',
-                sources_used or '',
-                model_used or ''
-            ]
+            # Check for existing entry with same query and response
+            existing_row = self._find_existing_feedback(user_query, chatbot_response)
             
-            # Append to sheet
-            self.sheet.append_row(row_data)
+            if existing_row:
+                # Update existing entry
+                row_number = existing_row['row_number']
+                self.sheet.update_cell(row_number, 4, 'Like' if rating == 1 else 'Dislike')  # Rating column
+                self.sheet.update_cell(row_number, 1, datetime.now().isoformat())  # Timestamp column
+                print(f"✅ Updated existing feedback entry (row {row_number}) with rating: {'Like' if rating == 1 else 'Dislike'}")
+            else:
+                # Add new entry
+                row_data = [
+                    datetime.now().isoformat(),
+                    user_query,
+                    chatbot_response,
+                    'Like' if rating == 1 else 'Dislike',
+                    session_id or '',
+                    response_time_ms or '',
+                    sources_used or '',
+                    model_used or ''
+                ]
+                
+                # Append to sheet
+                self.sheet.append_row(row_data)
+                print(f"✅ Created new feedback entry with rating: {'Like' if rating == 1 else 'Dislike'}")
             
-            print(f"✅ Feedback saved to Google Sheets: {'Like' if rating == 1 else 'Dislike'}")
             return True
             
         except Exception as e:
             print(f"❌ Error saving feedback: {e}")
             return False
+    
+    def _find_existing_feedback(self, user_query: str, chatbot_response: str) -> dict:
+        """Find existing feedback entry with same query and response"""
+        try:
+            # Get all data
+            all_data = self.sheet.get_all_records()
+            
+            # Look for matching query and response
+            for i, row in enumerate(all_data, start=2):  # start=2 because row 1 is headers
+                if (row.get('User Query') == user_query and 
+                    row.get('Chatbot Response') == chatbot_response):
+                    return {'row_number': i, 'data': row}
+            
+            return None
+            
+        except Exception as e:
+            print(f"❌ Error finding existing feedback: {e}")
+            return None
     
     def get_feedback_stats(self) -> Dict:
         """Get feedback statistics from Google Sheets"""
