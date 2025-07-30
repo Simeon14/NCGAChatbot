@@ -1,7 +1,6 @@
 # 🌽 NCGA Chatbot
 
-A web-based chatbot trained on National Corn Growers Association (NCGA) information that provides evidence-backed responses about corn farming, ethanol, trade policy, and other NCGA topics.
-
+A web-based chatbot trained on National Corn Growers Association (NCGA) public info that provides evidence-backed responses about NCGA Policies, Publications, and News
 ## Features
 
 - **Evidence-backed responses** - All information is cited from NCGA content
