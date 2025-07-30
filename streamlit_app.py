@@ -1,6 +1,8 @@
 import streamlit as st
 import os
 import time
+import openai
+import json
 from ncga_chatbot import NCGAChatbot
 from feedback_system import render_feedback_buttons, render_feedback_dashboard
 
@@ -96,7 +98,89 @@ if prompt := st.chat_input("Ask me about NCGA topics..."):
             try:
                 start_time = time.time()
                 
-                relevant = st.session_state.chatbot.search_relevant_content(prompt)
+                # Handle follow-up questions by combining with previous context
+                search_query = prompt
+                if len(st.session_state.messages) >= 2:
+                    # Use LLM to determine if this is a follow-up question and get the original topic
+                    try:
+                        client = openai.OpenAI(api_key=api_key)
+                        
+                        # Format full conversation history for context
+                        full_history = ""
+                        for msg in st.session_state.messages:
+                            if msg["role"] == "user":
+                                full_history += f"User: {msg['content']}\n"
+                            else:
+                                full_history += f"Assistant: {msg['content']}\n"
+                        
+                        followup_analysis = client.chat.completions.create(
+                            model="gpt-4o",
+                            messages=[
+                                {"role": "system", "content": "You are analyzing whether a user's current query is a follow-up question that refers to a previous topic in the conversation. Follow-up questions include: asking for more information, additional details, other aspects, different points, or anything else about the same topic. You must respond with valid JSON only, no other text."},
+                                {"role": "user", "content": f"""Analyze this conversation and the current user query:
+
+Full conversation:
+{full_history}
+
+Current user query: "{prompt}"
+
+Determine:
+1. Is this a follow-up question that refers to a previous topic? Consider phrases like "another thing", "what else", "anything else", "more", "additional", "other", etc. as follow-ups, as well as prompts that don't seem to be about a new topic (true/false)
+2. If yes, what was the original topic/question that this follows up on? (extract ONLY the exact key topic the user mentioned, do not add additional context or expand it)
+
+Respond with valid JSON only:
+{{
+    "is_followup": true/false,
+    "original_topic": "key topic or null"
+}}"""}
+                            ],
+                            max_tokens=150,
+                            temperature=0.1
+                        )
+                        
+                        response_text = followup_analysis.choices[0].message.content.strip()
+                        
+                        # Try to extract JSON from the response
+                        try:
+                            analysis = json.loads(response_text)
+                        except json.JSONDecodeError:
+                            # Try to find JSON in the response
+                            import re
+                            json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+                            if json_match:
+                                analysis = json.loads(json_match.group())
+                            else:
+                                raise Exception("No valid JSON found in response")
+                        
+                        if analysis.get("is_followup") and analysis.get("original_topic"):
+                            # Combine the follow-up with the original topic
+                            search_query = f"{analysis['original_topic']} {prompt}"
+                            
+                    except Exception as e:
+                        # Fallback to simple pattern matching if LLM analysis fails
+                        current_query_words = len(prompt.split())
+                        is_likely_followup = (
+                            current_query_words <= 3 or 
+                            any(pattern in prompt.lower() for pattern in ['more', 'else', 'again', 'continue', 'go on', 'and?', 'what about', 'how about'])
+                        )
+                        
+                        if is_likely_followup:
+                            # Find the most recent substantial user question
+                            last_substantial_question = None
+                            for msg in reversed(st.session_state.messages):
+                                if msg["role"] == "user":
+                                    msg_words = len(msg["content"].split())
+                                    is_short = msg_words <= 3
+                                    is_followup = any(pattern in msg["content"].lower() for pattern in ['more', 'else', 'again', 'continue', 'go on', 'and?', 'what about', 'how about'])
+                                    
+                                    if not is_short and not is_followup:
+                                        last_substantial_question = msg["content"]
+                                        break
+                            
+                            if last_substantial_question:
+                                search_query = f"{last_substantial_question} {prompt}"
+                
+                relevant = st.session_state.chatbot.search_relevant_content(search_query)
                 
                 if relevant:
                     with st.spinner("📚 Thinking..."):
