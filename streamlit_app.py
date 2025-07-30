@@ -54,6 +54,11 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
+# Clear chat button
+if st.sidebar.button("🗑️ Clear Chat"):
+    st.session_state.messages = []  # Clear chat history
+    st.rerun()
+
 # Chat input
 if prompt := st.chat_input("Ask me about NCGA topics..."):
     # Add user message to chat history
@@ -71,7 +76,11 @@ if prompt := st.chat_input("Ask me about NCGA topics..."):
                 
                 if relevant:
                     with st.spinner("📚 Found relevant information, generating response..."):
-                        response = st.session_state.chatbot.generate_response(prompt, relevant)
+                        response = st.session_state.chatbot.generate_response(
+                            prompt, 
+                            relevant,
+                            st.session_state.messages[:-1]  # Pass all previous messages except current query
+                        )
                 else:
                     response = "I don't have specific information about that topic in my NCGA training data. Please try asking about corn farming, ethanol, trade policy, or other NCGA-related topics."
                 
@@ -84,11 +93,6 @@ if prompt := st.chat_input("Ask me about NCGA topics..."):
                 error_msg = f"Sorry, I encountered an error: {str(e)}"
                 st.error(error_msg)
                 st.session_state.messages.append({"role": "assistant", "content": error_msg})
-
-# Clear chat button
-if st.sidebar.button("🗑️ Clear Chat"):
-    st.session_state.messages = []
-    st.rerun()
 
 # Footer
 st.sidebar.markdown("---")

@@ -372,18 +372,37 @@ Examples:
         
         return context
     
-    def generate_response(self, query: str, relevant_content: List[Dict]) -> str:
+    def generate_response(self, query: str, relevant_content: List[Dict], chat_history: List[Dict] = None) -> str:
         """Generate a response using OpenAI's API"""
         try:
             client = openai.OpenAI(api_key=self.api_key)
             
             context = self.format_context(relevant_content)
             
+            # Format chat history if provided
+            history_context = ""
+            if chat_history:
+                history_context = "\nPrevious conversation:\n"
+                for msg in chat_history:
+                    if msg["role"] == "user":
+                        history_context += f"User: {msg['content']}\n"
+                    else:
+                        history_context += f"Assistant: {msg['content']}\n"
+            
             # Get current date in YYYY-MM format
             current_date = datetime.now().strftime("%Y-%m")
             
             prompt = f"""
 You are a helpful AI assistant trained on NCGA (National Corn Growers Association) information. 
+
+Current Date: {current_date}
+
+Previous Conversation:
+{history_context if chat_history else "No previous conversation."}
+
+User Question: {query}
+
+{context}
 
 IMPORTANT RULES:
 1. Only provide information that is explicitly stated in the evidence provided
@@ -409,6 +428,11 @@ IMPORTANT RULES:
     - DO NOT explain what content you looked at
     - Suggest where the user might find the information (e.g., "You can find current corn prices on...")
     - Keep the response brief and direct
+11. Use conversation context:
+    - Consider previous questions and answers when responding
+    - If the user refers to previous information, acknowledge it
+    - Maintain consistency with previous responses
+    - If clarifying or updating previous information, explain why
 
 Examples of good responses:
 
@@ -424,12 +448,6 @@ Examples of BAD responses:
 ❌ "Here's a link to an article that doesn't answer your question..."
 ❌ "The source/article mentions [irrelevant information] but doesn't address your specific question..."
 
-User Question: {query}
-
-Current Date: {current_date}
-
-{context}
-
 Please provide a helpful, accurate response based on the evidence above. Remember:
 1. Only cite sources that directly answer the question with relevant information
 2. When citing, ALWAYS use the exact URL in parentheses: Source: (url)
@@ -437,6 +455,7 @@ Please provide a helpful, accurate response based on the evidence above. Remembe
 4. Keep "no information" responses brief and direct
 5. Write as if speaking directly to the user
 6. Be clear about temporal context when information is found
+7. Consider the conversation history when responding
 """
             
             response = client.chat.completions.create(
@@ -461,6 +480,8 @@ Please provide a helpful, accurate response based on the evidence above. Remembe
         print("Ask me about corn farming, ethanol, trade policy, or other NCGA topics!")
         print("Type 'quit' to exit\n")
         
+        chat_history = []
+        
         while True:
             try:
                 user_input = input("You: ").strip()
@@ -477,8 +498,10 @@ Please provide a helpful, accurate response based on the evidence above. Remembe
                 
                 if relevant_content:
                     print("📚 Found relevant information, generating response...")
-                    response = self.generate_response(user_input, relevant_content)
+                    response = self.generate_response(user_input, relevant_content, chat_history)
                     print(f"\nBot: {response}\n")
+                    chat_history.append({"role": "user", "content": user_input})
+                    chat_history.append({"role": "assistant", "content": response})
                 else:
                     print("\nBot: I don't have specific information about that topic in my NCGA training data. Please try asking about corn farming, ethanol, trade policy, or other NCGA-related topics.\n")
                     
