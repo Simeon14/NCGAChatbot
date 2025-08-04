@@ -4,10 +4,10 @@ NCGA Chatbot
 A RAG chatbot that uses evidence-paired training data to provide accurate responses.
 """
 
-# Fix SQLite version issue by using pysqlite3-binary (disabled for local development)
-# __import__('pysqlite3')
-# import sys
-# sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+# Fix SQLite version issue by using pysqlite3-binary
+__import__('pysqlite3')
+import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 
 import os
 import openai
@@ -34,28 +34,16 @@ class NCGAChatbot:
         # Create/load ChromaDB collection with persistent storage (SQLite fixed)
         self.chroma_client = chromadb.PersistentClient(path="chroma_db_metadata")
         
-        # Debug: List existing collections
-        collections = self.chroma_client.list_collections()
-        print(f"🔍 Existing collections: {[c.name for c in collections]}")
+        # Always use the specific "ncga_documents" collection
+        self.collection = self.chroma_client.get_or_create_collection(
+            name="ncga_documents",
+            embedding_function=self.openai_ef
+        )
         
-        # Try to use existing collection first, fall back to creating new one
-        if collections:
-            # Use the first existing collection (likely from LangChain)
-            existing_collection = collections[0]
-            print(f"📦 Using existing collection: {existing_collection.name}")
-            try:
-                self.collection = self.chroma_client.get_collection(
-                    name=existing_collection.name,
-                    embedding_function=self.openai_ef
-                )
-            except:
-                self.collection = existing_collection
-        else:
-            # Create new collection if none exist
-            self.collection = self.chroma_client.get_or_create_collection(
-                name="ncga_documents",
-                embedding_function=self.openai_ef
-            )
+        # Debug: List all collections for troubleshooting
+        collections = self.chroma_client.list_collections()
+        print(f"🔍 All collections: {[c.name for c in collections]}")
+        print(f"📦 Using collection: {self.collection.name}")
         
         # Debug: Check collection size
         count = self.collection.count()

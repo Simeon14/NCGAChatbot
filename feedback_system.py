@@ -57,17 +57,34 @@ class FeedbackSystem:
             self.sheet = None
     
     def _init_sheet_headers(self):
-        """Initialize sheet headers if the sheet is empty"""
+        """Initialize sheet headers ensuring they're in the correct position"""
         try:
-            headers = self.sheet.row_values(1)
-            if not headers:
-                # Add headers
-                headers = [
-                    'Timestamp', 'User Query', 'Chatbot Response', 'Rating', 
-                    'Session ID', 'Response Time (ms)', 'Sources Used', 'Model Used'
-                ]
-                self.sheet.append_row(headers)
-                print("✅ Initialized Google Sheet headers")
+            expected_headers = [
+                'Timestamp', 'User Query', 'Chatbot Response', 'Rating', 
+                'Session ID', 'Response Time (ms)', 'Sources Used', 'Model Used'
+            ]
+            
+            # Get current headers from row 1
+            try:
+                current_headers = self.sheet.row_values(1)
+            except:
+                current_headers = []
+            
+            # Check if headers need to be fixed
+            if not current_headers or current_headers != expected_headers:
+                print(f"🔧 Current headers: {current_headers}")
+                print(f"🔧 Expected headers: {expected_headers}")
+                
+                # Clear first row if it exists and set correct headers
+                if current_headers:
+                    self.sheet.delete_rows(1)
+                
+                # Insert headers at the very beginning (row 1, column 1)
+                self.sheet.insert_row(expected_headers, 1)
+                print("✅ Fixed Google Sheet headers - data should now align correctly")
+            else:
+                print("✅ Google Sheet headers already correct")
+                
         except Exception as e:
             print(f"❌ Error initializing sheet headers: {e}")
     
