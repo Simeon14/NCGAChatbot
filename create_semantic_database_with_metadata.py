@@ -40,7 +40,7 @@ class NCGASemanticDatabase:
             doc = {
                 'content': f"{article['title']}\n\n{article['content']}",
                 'metadata': {
-                    'type': 'news',
+                    'type': 'article',
                     'category': 'article',
                     'title': article['title'],
                     'url': article.get('link', ''),
@@ -63,11 +63,11 @@ class NCGASemanticDatabase:
         
         documents = []
         for policy in policies:
-            # Create document with policy metadata
+            # Create document with policy metadata (SIMPLE: policy file = policy type)
             doc = {
                 'content': policy['cleaned_evidence_content'],
                 'metadata': {
-                    'type': 'policy',
+                    'type': 'policy',  # Always policy for ncga_policy_content.json
                     'category': 'policy_document',
                     'title': policy['title'],
                     'url': policy.get('url', ''),
@@ -88,11 +88,7 @@ class NCGASemanticDatabase:
         
         documents = []
         for evidence in evidence_data:
-            # Determine if this is more policy-like or general content
-            page_name = evidence.get('page_name', '').lower()
-            is_policy_related = any(term in page_name for term in ['policy', 'position', 'advocacy', 'priority'])
-            
-            # Use the cleaned evidence content which is most refined
+            # SIMPLE: evidence file = general type (no complex logic)
             content = evidence.get('cleaned_evidence_content', 
                                  evidence.get('extracted_content', 
                                             evidence.get('original_content', '')))
@@ -100,7 +96,7 @@ class NCGASemanticDatabase:
             doc = {
                 'content': content,
                 'metadata': {
-                    'type': 'policy' if is_policy_related else 'general',
+                    'type': 'policy',  # Always policy for ncga_cleaned_evidence_content.json (combined with policy docs)
                     'category': 'evidence_content',
                     'title': evidence['title'],
                     'url': evidence.get('url', ''),
@@ -255,13 +251,11 @@ class NCGASemanticDatabase:
         # Print statistics
         print("\nDocument Statistics:")
         print("-"*40)
-        news_count = sum(1 for chunk in chunks if chunk['metadata']['type'] == 'news')
+        article_count = sum(1 for chunk in chunks if chunk['metadata']['type'] == 'article')
         policy_count = sum(1 for chunk in chunks if chunk['metadata']['type'] == 'policy')
-        general_count = sum(1 for chunk in chunks if chunk['metadata']['type'] == 'general')
         
-        print(f"News chunks: {news_count}")
+        print(f"Article chunks: {article_count}")
         print(f"Policy chunks: {policy_count}")
-        print(f"General chunks: {general_count}")
         print(f"Total chunks: {len(chunks)}")
         
         # Create vector store
@@ -269,9 +263,8 @@ class NCGASemanticDatabase:
         
         print("\n✅ Database creation complete!")
         print("\nYou can now use metadata filters in your searches:")
-        print("  - filter={'type': 'news'} for news articles")
-        print("  - filter={'type': 'policy'} for policy content")
-        print("  - filter={'type': 'general'} for general content")
+        print("  - filter={'type': 'article'} for news articles")
+        print("  - filter={'type': 'policy'} for policy and general content")
 
 
 if __name__ == "__main__":
