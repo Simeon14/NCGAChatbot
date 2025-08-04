@@ -93,7 +93,7 @@ class NCGAChatbot:
                     
                     formatted_results.append(result)
             
-            # For temporal queries, use hybrid relevance + recency ranking
+            # For temporal queries, sort by date (newest first) and limit results
             if is_temporal_query and formatted_results:
                 from datetime import datetime
                 
@@ -104,21 +104,13 @@ class NCGAChatbot:
                     except:
                         return datetime.min  # Put unparseable dates at the end
                 
-                # For topic-specific temporal queries, balance relevance + recency
-                # Keep top semantically relevant results, then sort by date
-                min_relevance_threshold = 0.3  # Only keep reasonably relevant results
-                relevant_results = [r for r in formatted_results if r['score'] >= min_relevance_threshold]
+                # Sort by date (newest first)
+                formatted_results.sort(key=lambda x: parse_date(x.get('pub_date', '')), reverse=True)
                 
-                if relevant_results:
-                    # Sort relevant results by date (newest first)
-                    relevant_results.sort(key=lambda x: parse_date(x.get('pub_date', '')), reverse=True)
-                    formatted_results = relevant_results[:top_k]
-                    print(f"🔍 Temporal query: filtered to {len(relevant_results)} relevant results, sorted by date")
-                else:
-                    # Fallback: if no highly relevant results, just sort all by date
-                    formatted_results.sort(key=lambda x: parse_date(x.get('pub_date', '')), reverse=True)
-                    formatted_results = formatted_results[:top_k]
-                    print(f"🔍 Temporal query: sorted {len(formatted_results)} results by date (low relevance fallback)")
+                # Limit to top_k results after sorting
+                formatted_results = formatted_results[:top_k]
+                
+                print(f"🔍 Temporal query detected, sorted {len(formatted_results)} results by date")
             
             return formatted_results
             
