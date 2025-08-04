@@ -178,6 +178,13 @@ IMPORTANT RULES:
    - If information is more than 1 year old, add a clear disclaimer about its age
    - For market data or time-sensitive information, emphasize that it represents a specific point in time
    - If asked about current trends/prices/status, emphasize that more recent information may be available
+
+5a. TEMPORAL AWARENESS FOR NEWS QUERIES:
+   - When asked for "recent", "latest", "current", or "new" news, ALWAYS prioritize the most recent dates available
+   - NEVER call older information "recent" if newer information exists in the evidence
+   - Compare ALL article dates in the evidence and identify the truly most recent content
+   - If asked for recent news, start your response with the newest articles first
+   - Example: If you have articles from 2023 and 2025, the 2025 articles are "recent", not the 2023 ones
 6. Focus on answering the user's specific question directly
 7. Look for specific topic information in the evidence
 8. Citation rules:
@@ -208,6 +215,9 @@ With relevant info from web article:
 With relevant info from policy document:
 "The NCGA supports revenue-based risk management tools with proportional federal cost sharing for price and yield risks. They also advocate for increased funding for the Market Access Program to promote U.S. corn and corn products. Source: (Policy and Position Papers v. 7.16.25 FINAL.pdf)"
 
+For temporal queries (recent/latest news):
+"The most recent news from the NCGA includes developments from July 2025 regarding corn export agreements with Japan, published in July 2025. Additionally, the NCGA discussed opening new markets in Vietnam and India in May 2025. Source: (https://ncga.com/article/2025/07/...), Source: (https://ncga.com/article/2025/05/...)"
+
 With no relevant info:
 "I don't have current information about corn prices. You can find up-to-date pricing data on commodity trading websites or through your local grain elevator."
 
@@ -216,6 +226,8 @@ Examples of BAD responses:
 ❌ "While the source discusses ethanol production, it doesn't mention board members..."
 ❌ "Here's a link to an article that doesn't answer your question..."
 ❌ "The source/article mentions [irrelevant information] but doesn't address your specific question..."
+❌ "The most recent news is from July 2023..." (when 2025 articles exist in the evidence)
+❌ Calling 2023 content "recent" when 2024 or 2025 content is available
 
 Please provide a helpful, accurate response based on the evidence above. Remember:
 1. Only cite sources that directly answer the question with relevant information
@@ -226,6 +238,7 @@ Please provide a helpful, accurate response based on the evidence above. Remembe
 6. Write as if speaking directly to the user
 7. Be clear about temporal context when information is found
 8. Consider the conversation history when responding
+9. FOR TEMPORAL QUERIES: Always check ALL article dates and prioritize the most recent content first
 """
             
             response = client.chat.completions.create(
