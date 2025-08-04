@@ -74,9 +74,23 @@ class NCGAChatbot:
                     results['metadatas'][0], 
                     results['distances'][0]
                 ):
+                    base_score = 1.0 - distance  # Convert distance to similarity
+                    
+                    # Apply subtle recency boost for articles
+                    final_score = base_score
+                    if metadata.get('type') == 'article' and metadata.get('pub_date'):
+                        pub_date = metadata.get('pub_date', '')
+                        if '2025' in pub_date:
+                            final_score += 0.08  # Small boost for 2025 articles
+                        elif '2024' in pub_date:
+                            final_score += 0.04  # Smaller boost for 2024 articles
+                        elif '2023' in pub_date:
+                            final_score += 0.02  # Tiny boost for 2023 articles
+                        # 2022 and older get no boost
+                    
                     result = {
                         'content': doc,
-                        'score': 1.0 - distance,  # Convert distance to similarity
+                        'score': final_score,
                         'type': metadata.get('type', 'general'),
                         'url': metadata.get('url', ''),
                         'title': metadata.get('title', 'Untitled')
