@@ -57,12 +57,20 @@ class NCGAChatbot:
     def search_relevant_content(self, query: str, top_k: int = 10) -> List[Dict]:
         """
         Perform semantic search using ChromaDB directly (no LangChain needed)
+        For temporal queries, prioritize recent content by date
         """
         try:
+            # Check if this is a temporal query that needs date-aware search
+            temporal_keywords = ['recent', 'latest', 'current', 'new', 'newest', 'today', 'this week', 'this month']
+            is_temporal_query = any(keyword in query.lower() for keyword in temporal_keywords)
+            
+            # For temporal queries, get more results to ensure we have recent content
+            search_limit = 50 if is_temporal_query else top_k
+            
             # Query ChromaDB collection directly
             results = self.collection.query(
                 query_texts=[query],
-                n_results=top_k,
+                n_results=search_limit,
                 include=['documents', 'metadatas', 'distances']
             )
             
@@ -79,13 +87,31 @@ class NCGAChatbot:
                         'score': 1.0 - distance,  # Convert distance to similarity
                         'type': metadata.get('type', 'general'),
                         'url': metadata.get('url', ''),
-                        'title': metadata.get('title', 'Untitled')
+                        'title': metadata.get('title', 'Untitled'),
+                        'pub_date': metadata.get('pub_date', '')
                     }
                     
-                    if metadata.get('type') == 'news':
-                        result['pub_date'] = metadata.get('pub_date', '')
-                    
                     formatted_results.append(result)
+            
+            # For temporal queries, sort by date (newest first) and limit results
+            if is_temporal_query and formatted_results:
+                from datetime import datetime
+                
+                def parse_date(date_str):
+                    try:
+                        # Parse the date format: "Thu, 24 Jul 2025 09:25:24 -0500"
+                        return datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S %z')
+                    except:
+                        return datetime.min  # Put unparseable dates at the end
+                
+                # Sort by date (newest first)
+                formatted_results.sort(key=lambda x: parse_date(x.get('pub_date', '')), reverse=True)
+                
+                # Limit to top_k results after sorting
+                formatted_results = formatted_results[:top_k]
+                
+                print(f"🔍 Temporal query detected, sorted {len(formatted_results)} results by date")
+            
             return formatted_results
             
         except Exception as e:
