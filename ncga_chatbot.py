@@ -4,6 +4,11 @@ NCGA Chatbot
 A RAG chatbot that uses evidence-paired training data to provide accurate responses.
 """
 
+# Fix SQLite version issue by using pysqlite3-binary
+__import__('pysqlite3')
+import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+
 import os
 import openai
 from dotenv import load_dotenv
@@ -26,103 +31,12 @@ class NCGAChatbot:
             model_name="text-embedding-ada-002"
         )
         
-        # Create ChromaDB collection (in-memory to avoid SQLite version issues)
-        self.chroma_client = chromadb.Client()
+        # Create/load ChromaDB collection with persistent storage (SQLite fixed)
+        self.chroma_client = chromadb.PersistentClient(path="chroma_db_metadata")
         self.collection = self.chroma_client.get_or_create_collection(
             name="ncga_documents",
             embedding_function=self.openai_ef
         )
-        
-        # Load data into collection if it's empty
-        self._populate_collection_if_needed()
-    
-    def _populate_collection_if_needed(self):
-        """Load JSON data into ChromaDB collection if it's empty"""
-        try:
-            # Check if collection has data
-            count = self.collection.count()
-            if count > 0:
-                print(f"✅ ChromaDB collection already has {count} documents")
-                return
-            
-            print("📚 Loading documents into ChromaDB...")
-            
-            # Load from JSON files
-            documents = []
-            metadatas = []
-            ids = []
-            
-            # Load evidence content
-            try:
-                with open('ncga_cleaned_evidence_content.json', 'r') as f:
-                    evidence_data = json.load(f)
-                for i, item in enumerate(evidence_data):
-                    content = item.get('cleaned_evidence_content', item.get('extracted_content', ''))
-                    if content:
-                        documents.append(content)
-                        metadatas.append({
-                            'type': 'general',
-                            'title': item.get('title', 'Untitled'),
-                            'url': item.get('url', ''),
-                            'source': 'evidence'
-                        })
-                        ids.append(f"evidence_{i}")
-                print(f"✅ Loaded {len(evidence_data)} evidence documents")
-            except FileNotFoundError:
-                print("⚠️ ncga_cleaned_evidence_content.json not found")
-            
-            # Load policy content
-            try:
-                with open('ncga_policy_content.json', 'r') as f:
-                    policy_data = json.load(f)
-                for i, item in enumerate(policy_data):
-                    content = item.get('cleaned_evidence_content', item.get('content', ''))
-                    if content:
-                        documents.append(content)
-                        metadatas.append({
-                            'type': 'policy',
-                            'title': item.get('title', 'Untitled'),
-                            'url': item.get('url', ''),
-                            'source': 'policy'
-                        })
-                        ids.append(f"policy_{i}")
-                print(f"✅ Loaded {len(policy_data)} policy documents")
-            except FileNotFoundError:
-                print("⚠️ ncga_policy_content.json not found")
-            
-            # Load articles
-            try:
-                with open('ncga_articles.json', 'r') as f:
-                    articles_data = json.load(f)
-                for i, item in enumerate(articles_data):
-                    content = item.get('content', '')
-                    if content:
-                        documents.append(content)
-                        metadatas.append({
-                            'type': 'news',
-                            'title': item.get('title', 'Untitled'),
-                            'url': item.get('link', ''),
-                            'pub_date': item.get('pub_date', ''),
-                            'source': 'articles'
-                        })
-                        ids.append(f"article_{i}")
-                print(f"✅ Loaded {len(articles_data)} article documents")
-            except FileNotFoundError:
-                print("⚠️ ncga_articles.json not found")
-            
-            # Add all documents to collection
-            if documents:
-                self.collection.add(
-                    documents=documents,
-                    metadatas=metadatas,
-                    ids=ids
-                )
-                print(f"🎯 Added {len(documents)} total documents to ChromaDB")
-            else:
-                print("❌ No documents found to load")
-                
-        except Exception as e:
-            print(f"❌ Error populating collection: {e}")
     
     def search_relevant_content(self, query: str, top_k: int = 10) -> List[Dict]:
         """
