@@ -181,9 +181,11 @@ IMPORTANT RULES:
 6. Focus on answering the user's specific question directly
 7. Look for specific topic information in the evidence
 8. Citation rules:
-   - When you use information from a source, ALWAYS cite it with the exact URL from the context
+   - When you use information from ANY source (web URL, PDF, or document), ALWAYS cite it
+   - Use the exact URL/reference from the context, whether it's a web link or PDF filename
    - Never cite or mention sources that don't contain relevant information
-   - Format citations as: Source: (exact_url)
+   - Format citations as: Source: (exact_url_or_document_reference)
+   - For policy documents with PDF references, still cite them: Source: (Policy and Position Papers v. 7.16.25 FINAL.pdf)
    - If evidence exists but isn't relevant to the question, ignore it completely
 9. Be direct and helpful
 10. When no relevant information is found:
@@ -200,8 +202,11 @@ IMPORTANT RULES:
 
 Examples of good responses:
 
-With relevant info:
+With relevant info from web article:
 "Ethanol production creates a significant market for corn farmers, using approximately 30% of U.S. field corn annually. This helps stabilize corn prices and provides a reliable market for farmers. Source: (https://ncga.com/key-issues/current-priorities/ethanol)"
+
+With relevant info from policy document:
+"The NCGA supports revenue-based risk management tools with proportional federal cost sharing for price and yield risks. They also advocate for increased funding for the Market Access Program to promote U.S. corn and corn products. Source: (Policy and Position Papers v. 7.16.25 FINAL.pdf)"
 
 With no relevant info:
 "I don't have current information about corn prices. You can find up-to-date pricing data on commodity trading websites or through your local grain elevator."
@@ -214,12 +219,13 @@ Examples of BAD responses:
 
 Please provide a helpful, accurate response based on the evidence above. Remember:
 1. Only cite sources that directly answer the question with relevant information
-2. When citing, ALWAYS use the exact URL in parentheses: Source: (url)
-3. Never mention or link to content that doesn't help answer the question
-4. Keep "no information" responses brief and direct
-5. Write as if speaking directly to the user
-6. Be clear about temporal context when information is found
-7. Consider the conversation history when responding
+2. When citing, ALWAYS use the exact URL or document reference in parentheses: Source: (url_or_document_name)
+3. ALWAYS cite policy documents even if they reference PDF files: Source: (Policy and Position Papers v. 7.16.25 FINAL.pdf)
+4. Never mention or link to content that doesn't help answer the question
+5. Keep "no information" responses brief and direct
+6. Write as if speaking directly to the user
+7. Be clear about temporal context when information is found
+8. Consider the conversation history when responding
 """
             
             response = client.chat.completions.create(
