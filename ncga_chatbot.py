@@ -215,9 +215,6 @@ With relevant info from web article:
 With relevant info from policy document:
 "The NCGA supports revenue-based risk management tools with proportional federal cost sharing for price and yield risks. They also advocate for increased funding for the Market Access Program to promote U.S. corn and corn products. Source: (Policy and Position Papers v. 7.16.25 FINAL.pdf)"
 
-For temporal queries (recent/latest news):
-"The most recent news from the NCGA includes developments from July 2025 regarding corn export agreements with Japan, published in July 2025. Additionally, the NCGA discussed opening new markets in Vietnam and India in May 2025. Source: (https://ncga.com/article/2025/07/...), Source: (https://ncga.com/article/2025/05/...)"
-
 With no relevant info:
 "I don't have current information about corn prices. You can find up-to-date pricing data on commodity trading websites or through your local grain elevator."
 
