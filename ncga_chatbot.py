@@ -10,8 +10,9 @@ from dotenv import load_dotenv
 from typing import List, Dict, Any
 import re
 from datetime import datetime
-from langchain_community.vectorstores import Chroma
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain.vectorstores import Chroma
+from langchain.embeddings import OpenAIEmbeddings
+from langchain.chat_models import ChatOpenAI
 from langchain.schema import HumanMessage, SystemMessage
 
 class NCGAChatbot:
