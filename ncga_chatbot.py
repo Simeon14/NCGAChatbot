@@ -78,14 +78,15 @@ class NCGAChatbot:
             # Format results to match expected structure
             formatted_results = []
             if results['documents'] and results['documents'][0]:
-                for doc, metadata, distance in zip(
+                for i, (doc, metadata, distance) in enumerate(zip(
                     results['documents'][0], 
                     results['metadatas'][0], 
                     results['distances'][0]
-                ):
+                )):
+                    similarity_score = 1.0 - distance
                     result = {
                         'content': doc,
-                        'score': 1.0 - distance,  # Convert distance to similarity
+                        'score': similarity_score,
                         'type': metadata.get('type', 'general'),
                         'url': metadata.get('url', ''),
                         'title': metadata.get('title', 'Untitled')
@@ -93,6 +94,10 @@ class NCGAChatbot:
                     
                     if metadata.get('type') == 'news':
                         result['pub_date'] = metadata.get('pub_date', '')
+                    
+                    # Debug: Print first few results
+                    if i < 3:
+                        print(f"  Result {i+1}: Score={similarity_score:.3f}, Type={metadata.get('type', 'unknown')}, Title='{metadata.get('title', 'No title')[:50]}...'")
                     
                     formatted_results.append(result)
             
