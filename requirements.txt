@@ -1,6 +1,10 @@
+# Original NCGA chatbot dependencies
 streamlit==1.28.1
-openai==1.12.0
 python-dotenv==1.0.1
 httpx==0.27.2
 gspread==6.2.1
 google-auth==2.40.3
+
+# Direct semantic search dependencies (no LangChain wrapper needed)
+chromadb==0.4.22
+openai>=1.10.0,<2.0.0

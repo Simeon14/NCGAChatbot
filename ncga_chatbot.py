@@ -10,10 +10,8 @@ from dotenv import load_dotenv
 from typing import List, Dict, Any
 import re
 from datetime import datetime
-from langchain.vectorstores import Chroma
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.chat_models import ChatOpenAI
-from langchain.schema import HumanMessage, SystemMessage
+import chromadb
+from chromadb.utils import embedding_functions
 
 class NCGAChatbot:
     def __init__(self, api_key: str = None):
@@ -22,83 +20,72 @@ class NCGAChatbot:
         if not self.api_key:
             raise ValueError("OpenAI API key not found. Please set OPENAI_API_KEY in .env file")
                 
-        # Initialize semantic search components
-        self.embeddings = OpenAIEmbeddings()
-        self.llm = ChatOpenAI(temperature=0, model="gpt-4o")
-        self.vector_store = Chroma(
-            persist_directory="chroma_db_metadata",
-            embedding_function=self.embeddings
+        # Initialize ChromaDB directly (no LangChain wrapper needed)
+        self.openai_ef = embedding_functions.OpenAIEmbeddingFunction(
+            api_key=self.api_key,
+            model_name="text-embedding-ada-002"
+        )
+        
+        # Create/load ChromaDB collection
+        self.chroma_client = chromadb.PersistentClient(path="chroma_db_metadata")
+        self.collection = self.chroma_client.get_or_create_collection(
+            name="ncga_documents",
+            embedding_function=self.openai_ef
         )
     
     def search_relevant_content(self, query: str, top_k: int = 10) -> List[Dict]:
         """
-        Perform semantic search with category filtering based on query type
+        Perform semantic search using ChromaDB directly (no LangChain needed)
         """
-        # Determine query category
-        category = self.determine_query_category(query)
-        
-        # Set up filter based on category
-        if category == 'news':
-            # Search only news articles
-            filter_dict = {"type": "news"}
-        else:
-            # Search policy and general content
-            filter_dict = {"$or": [{"type": "policy"}, {"type": "general"}]}
-        
-        # Perform semantic search with filter
-        results = self.vector_store.similarity_search_with_score(
-            query,
-            k=top_k,
-            filter=filter_dict
-        )
-        
-        # Format results to match original format
-        formatted_results = []
-        for doc, score in results:
-            metadata = doc.metadata
-            result = {
-                'content': doc.page_content,
-                'score': 1.0 - (score / 2.0),  # Convert distance to similarity
-                'type': metadata.get('type', 'unknown'),
-                'url': metadata.get('url', ''),
-                'title': metadata.get('title', 'Untitled')
-            }
+        try:
+            # Query ChromaDB collection directly
+            results = self.collection.query(
+                query_texts=[query],
+                n_results=top_k,
+                include=['documents', 'metadatas', 'distances']
+            )
             
-            # Add date for articles
-            if metadata.get('type') == 'news':
-                result['pub_date'] = metadata.get('pub_date', '')
+            # Format results to match expected structure
+            formatted_results = []
+            if results['documents'] and results['documents'][0]:
+                for doc, metadata, distance in zip(
+                    results['documents'][0], 
+                    results['metadatas'][0], 
+                    results['distances'][0]
+                ):
+                    result = {
+                        'content': doc,
+                        'score': 1.0 - distance,  # Convert distance to similarity
+                        'type': metadata.get('type', 'general'),
+                        'url': metadata.get('url', ''),
+                        'title': metadata.get('title', 'Untitled')
+                    }
+                    
+                    if metadata.get('type') == 'news':
+                        result['pub_date'] = metadata.get('pub_date', '')
+                    
+                    formatted_results.append(result)
             
-            formatted_results.append(result)
-        
-        return formatted_results
+            return formatted_results
+            
+        except Exception as e:
+            print(f"❌ ChromaDB search error: {e}")
+            return []
     
     def determine_query_category(self, query: str) -> str:
         """
         Determine if the query is about news or policy/general content.
         Returns either 'news' or 'policy_general'
         """
-        prompt = f"""Analyze this query and determine if it's asking about:
-1. News/Articles - Recent events, news updates, current happenings, media coverage
-2. Policy/General - Policy positions, advocacy, programs, general information about NCGA
-
-Query: "{query}"
-
-Respond with ONLY one word: either "news" or "policy_general"
-"""
+        # Simple keyword-based classification (no LangChain needed)
+        query_lower = query.lower()
+        news_keywords = ['news', 'recent', 'latest', 'current', 'today', 'yesterday', 'article', 'update']
         
-        messages = [
-            SystemMessage(content="You are a query classifier for the National Corn Growers Association."),
-            HumanMessage(content=prompt)
-        ]
-        
-        response = self.llm.invoke(messages)
-        category = response.content.strip().lower()
-        
-        # Default to policy_general if unclear
-        if category not in ['news', 'policy_general']:
-            category = 'policy_general'
-            
-        return category
+        # Check if query contains news-related keywords
+        if any(keyword in query_lower for keyword in news_keywords):
+            return 'news'
+        else:
+            return 'policy_general'
 
     def format_context(self, relevant_content: List[Dict]) -> str:
         """Format relevant content for the AI prompt"""
