@@ -50,22 +50,15 @@ class NCGAChatbot:
                 embedding_function=self.openai_ef
             )
         
-        # Debug: List all collections for troubleshooting
-        collections = self.chroma_client.list_collections()
-        print(f"🔍 All collections: {[c.name for c in collections]}")
-        print(f"📦 Using collection: {self.collection.name}")
-        
-        # Debug: Check collection size
+        # Check collection size
         count = self.collection.count()
-        print(f"📊 Collection '{self.collection.name}' has {count} documents")
+        print(f"📊 Loaded {count} NCGA documents")
     
     def search_relevant_content(self, query: str, top_k: int = 10) -> List[Dict]:
         """
         Perform semantic search using ChromaDB directly (no LangChain needed)
         """
         try:
-            print(f"🔍 Searching for: '{query}' in collection with {self.collection.count()} documents")
-            
             # Query ChromaDB collection directly
             results = self.collection.query(
                 query_texts=[query],
@@ -73,20 +66,17 @@ class NCGAChatbot:
                 include=['documents', 'metadatas', 'distances']
             )
             
-            print(f"📊 Raw search results: {len(results.get('documents', [[]])[0])} documents found")
-            
             # Format results to match expected structure
             formatted_results = []
             if results['documents'] and results['documents'][0]:
-                for i, (doc, metadata, distance) in enumerate(zip(
+                for doc, metadata, distance in zip(
                     results['documents'][0], 
                     results['metadatas'][0], 
                     results['distances'][0]
-                )):
-                    similarity_score = 1.0 - distance
+                ):
                     result = {
                         'content': doc,
-                        'score': similarity_score,
+                        'score': 1.0 - distance,  # Convert distance to similarity
                         'type': metadata.get('type', 'general'),
                         'url': metadata.get('url', ''),
                         'title': metadata.get('title', 'Untitled')
@@ -95,13 +85,7 @@ class NCGAChatbot:
                     if metadata.get('type') == 'news':
                         result['pub_date'] = metadata.get('pub_date', '')
                     
-                    # Debug: Print first few results
-                    if i < 3:
-                        print(f"  Result {i+1}: Score={similarity_score:.3f}, Type={metadata.get('type', 'unknown')}, Title='{metadata.get('title', 'No title')[:50]}...'")
-                    
                     formatted_results.append(result)
-            
-            print(f"✅ Returning {len(formatted_results)} formatted results")
             return formatted_results
             
         except Exception as e:
