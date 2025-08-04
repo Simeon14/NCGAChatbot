@@ -71,10 +71,81 @@ class FeedbackSystem:
         except Exception as e:
             print(f"❌ Error initializing sheet headers: {e}")
     
+    def save_interaction(self, user_query: str, chatbot_response: str, 
+                        session_id: str = None, response_time_ms: int = None, 
+                        sources_used: str = None, model_used: str = None) -> bool:
+        """Save user interaction to Google Sheets without rating (for automatic saving)"""
+        if not self.sheet:
+            print("❌ No Google Sheet connection available")
+            return False
+            
+        try:
+            # Check for existing entry with same query and response
+            existing_row = self._find_existing_feedback(user_query, chatbot_response)
+            
+            if existing_row:
+                # Entry already exists, don't create duplicate
+                print(f"⏭️ Interaction already exists (row {existing_row['row_number']})")
+                return True
+            
+            # Format sources_used for storage
+            sources_str = ""
+            if sources_used:
+                if isinstance(sources_used, list):
+                    sources_str = "; ".join([f"{s.get('title', '')} ({s.get('type', '')})" for s in sources_used])
+                else:
+                    sources_str = str(sources_used)
+            
+            # Add new entry without rating
+            row_data = [
+                datetime.now().isoformat(),
+                user_query,
+                chatbot_response,
+                '',  # No rating initially
+                session_id or '',
+                response_time_ms or '',
+                sources_str,
+                model_used or ''
+            ]
+            
+            # Append to sheet
+            self.sheet.append_row(row_data)
+            print(f"✅ Saved new interaction automatically")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error saving interaction: {e}")
+            return False
+    
+    def update_rating(self, user_query: str, chatbot_response: str, rating: int) -> bool:
+        """Update rating for an existing interaction"""
+        if not self.sheet:
+            print("❌ No Google Sheet connection available")
+            return False
+            
+        try:
+            # Find existing entry
+            existing_row = self._find_existing_feedback(user_query, chatbot_response)
+            
+            if existing_row:
+                # Update existing entry
+                row_number = existing_row['row_number']
+                self.sheet.update_cell(row_number, 4, 'Like' if rating == 1 else 'Dislike')  # Rating column
+                self.sheet.update_cell(row_number, 1, datetime.now().isoformat())  # Update timestamp
+                print(f"✅ Updated rating for existing entry (row {row_number}): {'Like' if rating == 1 else 'Dislike'}")
+                return True
+            else:
+                print(f"❌ No existing interaction found to update rating")
+                return False
+            
+        except Exception as e:
+            print(f"❌ Error updating rating: {e}")
+            return False
+
     def save_feedback(self, user_query: str, chatbot_response: str, rating: int, 
                      session_id: str = None, response_time_ms: int = None, 
                      sources_used: str = None, model_used: str = None) -> bool:
-        """Save user feedback to Google Sheets"""
+        """Save user feedback to Google Sheets (legacy method for compatibility)"""
         if not self.sheet:
             print("❌ No Google Sheet connection available")
             return False
@@ -85,12 +156,17 @@ class FeedbackSystem:
             
             if existing_row:
                 # Update existing entry
-                row_number = existing_row['row_number']
-                self.sheet.update_cell(row_number, 4, 'Like' if rating == 1 else 'Dislike')  # Rating column
-                self.sheet.update_cell(row_number, 1, datetime.now().isoformat())  # Timestamp column
-                print(f"✅ Updated existing feedback entry (row {row_number}) with rating: {'Like' if rating == 1 else 'Dislike'}")
+                return self.update_rating(user_query, chatbot_response, rating)
             else:
-                # Add new entry
+                # Add new entry (this shouldn't happen with new flow, but keeping for compatibility)
+                # Format sources_used for storage
+                sources_str = ""
+                if sources_used:
+                    if isinstance(sources_used, list):
+                        sources_str = "; ".join([f"{s.get('title', '')} ({s.get('type', '')})" for s in sources_used])
+                    else:
+                        sources_str = str(sources_used)
+                
                 row_data = [
                     datetime.now().isoformat(),
                     user_query,
@@ -98,7 +174,7 @@ class FeedbackSystem:
                     'Like' if rating == 1 else 'Dislike',
                     session_id or '',
                     response_time_ms or '',
-                    sources_used or '',
+                    sources_str,
                     model_used or ''
                 ]
                 
@@ -140,18 +216,23 @@ class FeedbackSystem:
             all_data = self.sheet.get_all_records()
             
             if not all_data:
-                return {'total_feedback': 0, 'likes': 0, 'dislikes': 0}
+                return {'total_interactions': 0, 'total_rated': 0, 'likes': 0, 'dislikes': 0, 'unrated': 0}
             
-            total_feedback = len(all_data)
+            total_interactions = len(all_data)
             likes = sum(1 for row in all_data if row.get('Rating') == 'Like')
             dislikes = sum(1 for row in all_data if row.get('Rating') == 'Dislike')
+            unrated = sum(1 for row in all_data if not row.get('Rating') or row.get('Rating').strip() == '')
+            total_rated = likes + dislikes
             
-            satisfaction_rate = round(likes / max(total_feedback, 1) * 100, 1)
+            # Calculate satisfaction rate based only on rated interactions
+            satisfaction_rate = round(likes / max(total_rated, 1) * 100, 1) if total_rated > 0 else 0
             
             return {
-                'total_feedback': total_feedback,
+                'total_interactions': total_interactions,
+                'total_rated': total_rated,
                 'likes': likes,
                 'dislikes': dislikes,
+                'unrated': unrated,
                 'satisfaction_rate': satisfaction_rate
             }
             
@@ -239,20 +320,23 @@ def render_feedback_dashboard():
     
     st.subheader("📊 Feedback Analytics")
     
-    # Create metrics
-    col1, col2, col3, col4 = st.columns(4)
+    # Create metrics - now showing 5 columns
+    col1, col2, col3, col4, col5 = st.columns(5)
     
     with col1:
-        st.metric("Total Feedback", stats['total_feedback'])
+        st.metric("Total Interactions", stats.get('total_interactions', 0))
     
     with col2:
-        st.metric("Satisfaction Rate", f"{stats['satisfaction_rate']}%")
+        st.metric("Rated", stats.get('total_rated', 0))
     
     with col3:
-        st.metric("Likes", stats['likes'])
+        st.metric("Unrated", stats.get('unrated', 0))
     
     with col4:
-        st.metric("Dislikes", stats['dislikes'])
+        st.metric("Likes", stats.get('likes', 0))
+    
+    with col5:
+        st.metric("Satisfaction Rate", f"{stats.get('satisfaction_rate', 0)}%")
     
     # Recent feedback
     st.subheader("📝 Recent Feedback")

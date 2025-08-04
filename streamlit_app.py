@@ -138,28 +138,62 @@ if prompt := st.chat_input("Ask me about NCGA topics..."):
                 # Get model used
                 model_used = "gpt-4o"  # Update this if you change models
                 
+                # Auto-save every interaction to feedback system
+                try:
+                    from feedback_system import FeedbackSystem
+                    fs = FeedbackSystem()
+                    fs.save_interaction(
+                        user_query=prompt,
+                        chatbot_response=response,
+                        session_id=session_id,
+                        response_time_ms=response_time_ms,
+                        sources_used=sources_used,
+                        model_used=model_used
+                    )
+                except Exception as save_error:
+                    print(f"❌ Error auto-saving interaction: {save_error}")
+                
             except Exception as e:
                 error_msg = f"Sorry, I encountered an error: {str(e)}"
                 st.error(error_msg)
                 st.session_state.messages.append({"role": "assistant", "content": error_msg})
+                
+                # Auto-save error interactions too
+                try:
+                    from feedback_system import FeedbackSystem
+                    fs = FeedbackSystem()
+                    fs.save_interaction(
+                        user_query=prompt,
+                        chatbot_response=error_msg,
+                        session_id=str(hash(st.session_state.get('_session_id', time.time()))),
+                        model_used="gpt-4o"
+                    )
+                except Exception as save_error:
+                    print(f"❌ Error auto-saving error interaction: {save_error}")
 
 # Global feedback buttons in sidebar (outside chat context)
 if 'last_response' in st.session_state and 'last_query' in st.session_state:
     st.sidebar.markdown("---")
-    st.sidebar.markdown("**Feedback:**")
+    st.sidebar.markdown("**Rate the last response:**")
     
     if st.sidebar.button("👍 Like Last Response", key="like_last"):
         print("DEBUG: Like last response clicked!")
         from feedback_system import FeedbackSystem
         fs = FeedbackSystem()
-        success = fs.save_feedback(st.session_state.last_query, st.session_state.last_response, 1)
-        print(f"DEBUG: Like save result: {success}")
-        st.sidebar.success("Like saved!")
+        success = fs.update_rating(st.session_state.last_query, st.session_state.last_response, 1)
+        print(f"DEBUG: Like update result: {success}")
+        if success:
+            st.sidebar.success("👍 Rating updated!")
+        else:
+            st.sidebar.error("❌ Could not update rating")
     
     if st.sidebar.button("👎 Dislike Last Response", key="dislike_last"):
         print("DEBUG: Dislike last response clicked!")
         from feedback_system import FeedbackSystem
         fs = FeedbackSystem()
-        success = fs.save_feedback(st.session_state.last_query, st.session_state.last_response, 0)
-        print(f"DEBUG: Dislike save result: {success}")
-        st.sidebar.success("Dislike saved!")
+        success = fs.update_rating(st.session_state.last_query, st.session_state.last_response, 0)
+        print(f"DEBUG: Dislike update result: {success}")
+        if success:
+            st.sidebar.success("👎 Rating updated!")
+        else:
+            st.sidebar.error("❌ Could not update rating")
