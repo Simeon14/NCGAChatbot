@@ -104,21 +104,31 @@ class NCGAChatbot:
                     except:
                         return datetime.min  # Put unparseable dates at the end
                 
-                # For topic-specific temporal queries, balance relevance + recency
-                # Keep top semantically relevant results, then sort by date
-                min_relevance_threshold = 0.3  # Only keep reasonably relevant results
-                relevant_results = [r for r in formatted_results if r['score'] >= min_relevance_threshold]
+                # Check if this is a topic-specific temporal query (has other keywords beyond temporal ones)
+                query_words = query.lower().split()
+                temporal_words = ['recent', 'latest', 'current', 'new', 'newest', 'today', 'week', 'month']
+                non_temporal_words = [word for word in query_words if word not in temporal_words and len(word) > 2]
                 
-                if relevant_results:
-                    # Sort relevant results by date (newest first)
-                    relevant_results.sort(key=lambda x: parse_date(x.get('pub_date', '')), reverse=True)
-                    formatted_results = relevant_results[:top_k]
-                    print(f"🔍 Temporal query: filtered to {len(relevant_results)} relevant results, sorted by date")
+                if len(non_temporal_words) > 0:
+                    # Topic-specific temporal query: balance relevance + recency
+                    min_relevance_threshold = 0.2  # Lower threshold for better recall
+                    relevant_results = [r for r in formatted_results if r['score'] >= min_relevance_threshold]
+                    
+                    if relevant_results:
+                        # Sort relevant results by date (newest first)
+                        relevant_results.sort(key=lambda x: parse_date(x.get('pub_date', '')), reverse=True)
+                        formatted_results = relevant_results[:top_k]
+                        print(f"🔍 Topic-specific temporal query: filtered to {len(relevant_results)} relevant results, sorted by date")
+                    else:
+                        # Fallback: just sort all by date
+                        formatted_results.sort(key=lambda x: parse_date(x.get('pub_date', '')), reverse=True)
+                        formatted_results = formatted_results[:top_k]
+                        print(f"🔍 Topic-specific temporal query: no relevant results, sorting all by date")
                 else:
-                    # Fallback: if no highly relevant results, just sort all by date
+                    # General temporal query (just "recent news"): sort all by date, no relevance filtering
                     formatted_results.sort(key=lambda x: parse_date(x.get('pub_date', '')), reverse=True)
                     formatted_results = formatted_results[:top_k]
-                    print(f"🔍 Temporal query: sorted {len(formatted_results)} results by date (low relevance fallback)")
+                    print(f"🔍 General temporal query: sorted {len(formatted_results)} results by date")
             
             return formatted_results
             
