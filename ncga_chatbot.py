@@ -34,11 +34,21 @@ class NCGAChatbot:
         # Create/load ChromaDB collection with persistent storage (SQLite fixed)
         self.chroma_client = chromadb.PersistentClient(path="chroma_db_metadata")
         
-        # Always use the specific "ncga_documents" collection
-        self.collection = self.chroma_client.get_or_create_collection(
-            name="ncga_documents",
-            embedding_function=self.openai_ef
-        )
+        # Use the existing collection (could be "langchain" or "ncga_documents")
+        collections = self.chroma_client.list_collections()
+        if collections:
+            # Use the existing collection (backwards compatibility)
+            existing_collection = collections[0]
+            self.collection = self.chroma_client.get_collection(
+                name=existing_collection.name,
+                embedding_function=self.openai_ef
+            )
+        else:
+            # Create new collection if none exist
+            self.collection = self.chroma_client.get_or_create_collection(
+                name="ncga_documents",
+                embedding_function=self.openai_ef
+            )
         
         # Debug: List all collections for troubleshooting
         collections = self.chroma_client.list_collections()
