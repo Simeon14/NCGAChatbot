@@ -4,3 +4,16 @@ python-dotenv==1.0.1
 httpx==0.27.2
 gspread==6.2.1
 google-auth==2.40.3
+
+# ChromaDB and LangChain dependencies
+chromadb==0.4.22
+langchain==0.1.12
+langchain-community==0.0.27
+langchain-openai==0.0.8
+langchain-core==0.1.31
+
+# Additional dependencies for text processing and embeddings
+tiktoken==0.6.0
+numpy==1.24.3
+pydantic==2.6.4
+tenacity==8.2.3
