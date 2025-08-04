@@ -4,10 +4,10 @@ NCGA Chatbot
 A RAG chatbot that uses evidence-paired training data to provide accurate responses.
 """
 
-# Fix SQLite version issue by using pysqlite3-binary
-__import__('pysqlite3')
-import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+# Fix SQLite version issue by using pysqlite3-binary (disabled for local development)
+# __import__('pysqlite3')
+# import sys
+# sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 
 import os
 import openai
@@ -33,22 +33,49 @@ class NCGAChatbot:
         
         # Create/load ChromaDB collection with persistent storage (SQLite fixed)
         self.chroma_client = chromadb.PersistentClient(path="chroma_db_metadata")
-        self.collection = self.chroma_client.get_or_create_collection(
-            name="ncga_documents",
-            embedding_function=self.openai_ef
-        )
+        
+        # Debug: List existing collections
+        collections = self.chroma_client.list_collections()
+        print(f"🔍 Existing collections: {[c.name for c in collections]}")
+        
+        # Try to use existing collection first, fall back to creating new one
+        if collections:
+            # Use the first existing collection (likely from LangChain)
+            existing_collection = collections[0]
+            print(f"📦 Using existing collection: {existing_collection.name}")
+            try:
+                self.collection = self.chroma_client.get_collection(
+                    name=existing_collection.name,
+                    embedding_function=self.openai_ef
+                )
+            except:
+                self.collection = existing_collection
+        else:
+            # Create new collection if none exist
+            self.collection = self.chroma_client.get_or_create_collection(
+                name="ncga_documents",
+                embedding_function=self.openai_ef
+            )
+        
+        # Debug: Check collection size
+        count = self.collection.count()
+        print(f"📊 Collection '{self.collection.name}' has {count} documents")
     
     def search_relevant_content(self, query: str, top_k: int = 10) -> List[Dict]:
         """
         Perform semantic search using ChromaDB directly (no LangChain needed)
         """
         try:
+            print(f"🔍 Searching for: '{query}' in collection with {self.collection.count()} documents")
+            
             # Query ChromaDB collection directly
             results = self.collection.query(
                 query_texts=[query],
                 n_results=top_k,
                 include=['documents', 'metadatas', 'distances']
             )
+            
+            print(f"📊 Raw search results: {len(results.get('documents', [[]])[0])} documents found")
             
             # Format results to match expected structure
             formatted_results = []
@@ -71,6 +98,7 @@ class NCGAChatbot:
                     
                     formatted_results.append(result)
             
+            print(f"✅ Returning {len(formatted_results)} formatted results")
             return formatted_results
             
         except Exception as e:
