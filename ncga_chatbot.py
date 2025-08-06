@@ -4,10 +4,8 @@ NCGA Chatbot
 A RAG chatbot that uses evidence-paired training data to provide accurate responses.
 """
 
-# Fix SQLite version issue by using pysqlite3-binary
-__import__('pysqlite3')
-import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+# Use built-in sqlite3 module instead of pysqlite3
+# This avoids the need for pysqlite3-binary installation
 
 import os
 import openai

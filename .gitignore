@@ -62,6 +62,14 @@ test_*.py
 *.db
 feedback.db
 feedback_export.json
+chroma_db_metadata/
+
+# Data files (development/testing)
+*.json
+
+# Development and testing scripts
+create_semantic_database_with_metadata.py
+test_chunks.py
 
 # Google Sheets setup (private)
 GOOGLE_SHEETS_SETUP.md 

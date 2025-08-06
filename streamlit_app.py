@@ -118,6 +118,10 @@ if prompt := st.chat_input("Ask me about NCGA topics..."):
                 # Add assistant response to chat history
                 st.session_state.messages.append({"role": "assistant", "content": response})
                 
+                # Add expander to show chunks
+                with st.expander("Show source chunks used in response"):
+                    st.text(st.session_state.chatbot.get_latest_chunks_formatted())
+                
                 # Store last query and response for feedback
                 st.session_state.last_query = prompt
                 st.session_state.last_response = response
