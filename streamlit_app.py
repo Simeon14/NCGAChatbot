@@ -118,10 +118,6 @@ if prompt := st.chat_input("Ask me about NCGA topics..."):
                 # Add assistant response to chat history
                 st.session_state.messages.append({"role": "assistant", "content": response})
                 
-                # Add expander to show chunks
-                with st.expander("Show source chunks used in response"):
-                    st.text(st.session_state.chatbot.get_latest_chunks_formatted())
-                
                 # Store last query and response for feedback
                 st.session_state.last_query = prompt
                 st.session_state.last_response = response
@@ -181,22 +177,18 @@ if 'last_response' in st.session_state and 'last_query' in st.session_state:
     st.sidebar.markdown("**Rate the last response:**")
     
     if st.sidebar.button("👍 Like Last Response", key="like_last"):
-        print("DEBUG: Like last response clicked!")
         from feedback_system import FeedbackSystem
         fs = FeedbackSystem()
         success = fs.update_rating(st.session_state.last_query, st.session_state.last_response, 1)
-        print(f"DEBUG: Like update result: {success}")
         if success:
             st.sidebar.success("👍 Rating updated!")
         else:
             st.sidebar.error("❌ Could not update rating")
     
     if st.sidebar.button("👎 Dislike Last Response", key="dislike_last"):
-        print("DEBUG: Dislike last response clicked!")
         from feedback_system import FeedbackSystem
         fs = FeedbackSystem()
         success = fs.update_rating(st.session_state.last_query, st.session_state.last_response, 0)
-        print(f"DEBUG: Dislike update result: {success}")
         if success:
             st.sidebar.success("👎 Rating updated!")
         else:
