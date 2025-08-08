@@ -15,6 +15,7 @@ import re
 from datetime import datetime
 import chromadb
 from chromadb.utils import embedding_functions
+from chromadb.config import Settings
 
 class NCGAChatbot:
     def __init__(self, api_key: str = None):
@@ -29,8 +30,13 @@ class NCGAChatbot:
             model_name="text-embedding-ada-002"
         )
         
-        # Create/load ChromaDB collection with persistent storage (SQLite fixed)
-        self.chroma_client = chromadb.PersistentClient(path="chroma_db_metadata")
+        # Create/load ChromaDB collection using DuckDB+Parquet to avoid sqlite dependency
+        self.chroma_client = chromadb.PersistentClient(
+            settings=Settings(
+                chroma_db_impl="duckdb+parquet",
+                persist_directory="chroma_db_metadata"
+            )
+        )
         
         # Use the existing collection (could be "langchain" or "ncga_documents")
         collections = self.chroma_client.list_collections()
