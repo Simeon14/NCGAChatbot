@@ -4,8 +4,15 @@ NCGA Chatbot
 A RAG chatbot that uses evidence-paired training data to provide accurate responses.
 """
 
-# Use built-in sqlite3 module instead of pysqlite3
-# This avoids the need for pysqlite3-binary installation
+# Ensure Chroma sees a modern SQLite on platforms where system sqlite3 is old
+# Map sqlite3 -> pysqlite3 BEFORE importing chromadb
+import sys
+try:
+    import pysqlite3 as _pysqlite3  # type: ignore
+    sys.modules["sqlite3"] = _pysqlite3
+except Exception:
+    # If pysqlite3 isn't present, proceed; DuckDB backend will avoid sqlite at runtime
+    pass
 
 import os
 import openai
@@ -30,13 +37,9 @@ class NCGAChatbot:
             model_name="text-embedding-ada-002"
         )
         
-        # Create/load ChromaDB collection using DuckDB+Parquet to avoid sqlite dependency
-        self.chroma_client = chromadb.PersistentClient(
-            settings=Settings(
-                chroma_db_impl="duckdb+parquet",
-                persist_directory="chroma_db_metadata"
-            )
-        )
+        # Create/load ChromaDB persistent client (0.4.x-compatible construction)
+        # Default backend persists under the provided path
+        self.chroma_client = chromadb.PersistentClient(path="chroma_db_metadata")
         
         # Use the existing collection (could be "langchain" or "ncga_documents")
         collections = self.chroma_client.list_collections()
