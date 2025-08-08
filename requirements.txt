@@ -8,4 +8,4 @@ google-auth==2.40.3
 # Direct semantic search dependencies (no LangChain wrapper needed)
 chromadb==0.4.22
 openai>=1.10.0,<2.0.0
-pysqlite3-binary==0.5.2
+pysqlite3-binary==0.5.4
