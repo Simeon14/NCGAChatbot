@@ -16,7 +16,7 @@ except Exception:
 
 import os
 import openai
-from dotenv import load_dotenv
+import json
 from typing import List, Dict, Any
 import re
 from datetime import datetime
@@ -26,10 +26,9 @@ from chromadb.config import Settings
 
 class NCGAChatbot:
     def __init__(self, api_key: str = None):
-        load_dotenv()
-        self.api_key = api_key or os.getenv('OPENAI_API_KEY')
+        self.api_key = api_key
         if not self.api_key:
-            raise ValueError("OpenAI API key not found. Please set OPENAI_API_KEY in .env file")
+            raise ValueError("OpenAI API key is required. Please provide it when initializing the chatbot.")
                 
         # Initialize ChromaDB directly (no LangChain wrapper needed)
         self.openai_ef = embedding_functions.OpenAIEmbeddingFunction(

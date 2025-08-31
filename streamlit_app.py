@@ -32,9 +32,9 @@ with st.sidebar:
     
     # Get API key from secrets or user input
     try:
-        api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+        api_key = st.secrets.get("OPENAI_API_KEY")
     except:
-        api_key = os.getenv("OPENAI_API_KEY")
+        api_key = None
     
     # Show API key input or success message
     if not api_key or st.session_state.show_api_input:

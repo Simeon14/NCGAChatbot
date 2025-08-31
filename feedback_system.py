@@ -15,7 +15,8 @@ class FeedbackSystem:
     def __init__(self, credentials_file: str = None, sheet_id: str = None):
         """Initialize the feedback system with Google Sheets connection"""
         self.credentials_file = credentials_file
-        self.sheet_id = sheet_id or os.getenv('GOOGLE_SHEET_ID')
+        # Hardcoded Google Sheet ID for production deployment
+        self.sheet_id = sheet_id or "7bf6bbe37a69e00be364f74d8f66773baae5244e"
         
         if not self.sheet_id:
             print("⚠️ No Google Sheet ID provided. Feedback will not be saved.")
@@ -30,19 +31,23 @@ class FeedbackSystem:
             if credentials_file and os.path.exists(credentials_file):
                 creds = Credentials.from_service_account_file(credentials_file, scopes=scope)
             else:
-                # Try to use environment variables for credentials
-                creds = Credentials.from_service_account_info({
-                    "type": "service_account",
-                    "project_id": os.getenv('GOOGLE_PROJECT_ID'),
-                    "private_key_id": os.getenv('GOOGLE_PRIVATE_KEY_ID'),
-                    "private_key": os.getenv('GOOGLE_PRIVATE_KEY', '').replace('\\n', '\n'),
-                    "client_email": os.getenv('GOOGLE_CLIENT_EMAIL'),
-                    "client_id": os.getenv('GOOGLE_CLIENT_ID'),
-                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                    "token_uri": "https://oauth2.googleapis.com/token",
-                    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-                    "client_x509_cert_url": os.getenv('GOOGLE_CLIENT_X509_CERT_URL')
-                }, scopes=scope)
+                # Try to use Streamlit secrets for credentials
+                try:
+                    creds = Credentials.from_service_account_info({
+                        "type": "service_account",
+                        "project_id": st.secrets.get('GOOGLE_PROJECT_ID'),
+                        "private_key_id": st.secrets.get('GOOGLE_PRIVATE_KEY_ID'),
+                        "private_key": st.secrets.get('GOOGLE_PRIVATE_KEY', '').replace('\\n', '\n'),
+                        "client_email": st.secrets.get('GOOGLE_CLIENT_EMAIL'),
+                        "client_id": st.secrets.get('GOOGLE_CLIENT_ID'),
+                        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                        "token_uri": "https://oauth2.googleapis.com/token",
+                        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                        "client_x509_cert_url": st.secrets.get('GOOGLE_CLIENT_X509_CERT_URL')
+                    }, scopes=scope)
+                except:
+                    # If no secrets available, feedback system will be disabled
+                    raise Exception("Google credentials not available in Streamlit secrets")
             
             self.client = gspread.authorize(creds)
             self.sheet = self.client.open_by_key(self.sheet_id).sheet1
