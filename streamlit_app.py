@@ -151,7 +151,10 @@ if prompt := st.chat_input("Ask me about NCGA topics..."):
                         model_used=model_used
                     )
                 except Exception as save_error:
-                    print(f"❌ Error auto-saving interaction: {save_error}")
+                    st.warning(f"⚠️ Feedback system error: {save_error}")
+                    # Also use st.exception to show in logs
+                    import traceback
+                    st.exception(save_error)
                 
             except Exception as e:
                 error_msg = f"Sorry, I encountered an error: {str(e)}"
@@ -169,7 +172,9 @@ if prompt := st.chat_input("Ask me about NCGA topics..."):
                         model_used="gpt-4o"
                     )
                 except Exception as save_error:
-                    print(f"❌ Error auto-saving error interaction: {save_error}")
+                    st.warning(f"⚠️ Feedback system error: {save_error}")
+                    import traceback
+                    st.exception(save_error)
 
 # Global feedback buttons in sidebar (outside chat context)
 if 'last_response' in st.session_state and 'last_query' in st.session_state:

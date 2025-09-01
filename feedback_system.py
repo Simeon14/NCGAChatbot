@@ -14,11 +14,9 @@ import os
 class FeedbackSystem:
     def __init__(self, credentials_file: str = None, sheet_id: str = None):
         """Initialize the feedback system with Google Sheets connection"""
-        print(f"🔍 DEBUG: FeedbackSystem.__init__ called")
         self.credentials_file = credentials_file
         # Hardcoded Google Sheet ID for production deployment
         self.sheet_id = sheet_id or "7bf6bbe37a69e00be364f74d8f66773baae5244e"
-        print(f"🔍 DEBUG: Using sheet_id: {self.sheet_id}")
         
         if not self.sheet_id:
             print("⚠️ No Google Sheet ID provided. Feedback will not be saved.")
@@ -49,7 +47,6 @@ class FeedbackSystem:
                     }, scopes=scope)
                 except Exception as cred_error:
                     # If no secrets available, feedback system will be disabled
-                    print(f"❌ Error accessing Streamlit secrets: {cred_error}")
                     raise Exception(f"Google credentials not available in Streamlit secrets: {cred_error}")
             
             self.client = gspread.authorize(creds)
@@ -144,7 +141,6 @@ class FeedbackSystem:
     
     def update_rating(self, user_query: str, chatbot_response: str, rating: int) -> bool:
         """Update rating for an existing interaction"""
-        print(f"🔍 DEBUG: update_rating called with rating: {rating}")
         if not self.sheet:
             print("❌ No Google Sheet connection available - self.sheet is None")
             return False
