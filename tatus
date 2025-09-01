@@ -1,0 +1,5 @@
+[33mc2d783b[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m fixes
+[33m0031ed9[m Fix deploy: remove pysqlite3 build and pin rich==13.9.4
+[33m46a0dbb[m fixes
+[33m05c3c20[m a
+[33m17b19b3[m Add pysqlite3 alongside pysqlite3-binary for Streamlit Py3.13
