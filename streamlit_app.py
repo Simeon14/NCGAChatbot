@@ -177,37 +177,19 @@ if 'last_response' in st.session_state and 'last_query' in st.session_state:
     st.sidebar.markdown("**Rate the last response:**")
     
     if st.sidebar.button("👍 Like Last Response", key="like_last"):
-        print("🔍 DEBUG: Like button clicked!")
-        st.write("🔍 DEBUG: Like button was clicked")  # This will show in the UI
-        try:
-            from feedback_system import FeedbackSystem
-            print("🔍 DEBUG: About to create FeedbackSystem")
-            fs = FeedbackSystem()
-            print("🔍 DEBUG: FeedbackSystem created, calling update_rating")
-            success = fs.update_rating(st.session_state.last_query, st.session_state.last_response, 1)
-            print(f"🔍 DEBUG: update_rating returned: {success}")
-            if success:
-                st.sidebar.success("👍 Rating updated!")
-            else:
-                st.sidebar.error("❌ Could not update rating")
-        except Exception as e:
-            print(f"🔍 DEBUG: Exception in like button: {e}")
-            st.sidebar.error(f"❌ Error: {e}")
+        from feedback_system import FeedbackSystem
+        fs = FeedbackSystem()
+        success = fs.update_rating(st.session_state.last_query, st.session_state.last_response, 1)
+        if success:
+            st.sidebar.success("👍 Rating updated!")
+        else:
+            st.sidebar.error("❌ Could not update rating")
     
     if st.sidebar.button("👎 Dislike Last Response", key="dislike_last"):
-        print("🔍 DEBUG: Dislike button clicked!")
-        st.write("🔍 DEBUG: Dislike button was clicked")  # This will show in the UI
-        try:
-            from feedback_system import FeedbackSystem
-            print("🔍 DEBUG: About to create FeedbackSystem")
-            fs = FeedbackSystem()
-            print("🔍 DEBUG: FeedbackSystem created, calling update_rating")
-            success = fs.update_rating(st.session_state.last_query, st.session_state.last_response, 0)
-            print(f"🔍 DEBUG: update_rating returned: {success}")
-            if success:
-                st.sidebar.success("👎 Rating updated!")
-            else:
-                st.sidebar.error("❌ Could not update rating")
-        except Exception as e:
-            print(f"🔍 DEBUG: Exception in dislike button: {e}")
-            st.sidebar.error(f"❌ Error: {e}")
+        from feedback_system import FeedbackSystem
+        fs = FeedbackSystem()
+        success = fs.update_rating(st.session_state.last_query, st.session_state.last_response, 0)
+        if success:
+            st.sidebar.success("👎 Rating updated!")
+        else:
+            st.sidebar.error("❌ Could not update rating")
