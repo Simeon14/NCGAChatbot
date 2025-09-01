@@ -10,13 +10,20 @@ from datetime import datetime
 from typing import Dict, List, Optional
 import streamlit as st
 import os
+import logging
+
+# Configure logging to show in Streamlit Cloud logs
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class FeedbackSystem:
     def __init__(self, credentials_file: str = None, sheet_id: str = None):
         """Initialize the feedback system with Google Sheets connection"""
+        logger.info("FeedbackSystem.__init__ called")
         self.credentials_file = credentials_file
         # Hardcoded Google Sheet ID for production deployment
         self.sheet_id = sheet_id or "7bf6bbe37a69e00be364f74d8f66773baae5244e"
+        logger.info(f"Using sheet_id: {self.sheet_id}")
         
         if not self.sheet_id:
             print("⚠️ No Google Sheet ID provided. Feedback will not be saved.")
@@ -58,6 +65,7 @@ class FeedbackSystem:
             print(f"✅ Connected to Google Sheet: {self.sheet.title}")
             
         except Exception as e:
+            logger.error(f"Error connecting to Google Sheets: {e}")
             print(f"❌ Error connecting to Google Sheets: {e}")
             self.sheet = None
     
@@ -97,7 +105,9 @@ class FeedbackSystem:
                         session_id: str = None, response_time_ms: int = None, 
                         sources_used: str = None, model_used: str = None) -> bool:
         """Save user interaction to Google Sheets without rating (for automatic saving)"""
+        logger.info("save_interaction called")
         if not self.sheet:
+            logger.error("No Google Sheet connection available - self.sheet is None")
             print("❌ No Google Sheet connection available")
             return False
             
