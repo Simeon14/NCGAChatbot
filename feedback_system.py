@@ -22,7 +22,7 @@ class FeedbackSystem:
         logger.info("FeedbackSystem.__init__ called")
         self.credentials_file = credentials_file
         # Hardcoded Google Sheet ID for production deployment
-        self.sheet_id = sheet_id or "7bf6bbe37a69e00be364f74d8f66773baae5244e"
+        self.sheet_id = sheet_id or "1qVzpHArSXyBGaWz0XTtuuAQaiUx5PEZxdACmP6N-EXk"
         logger.info(f"Using sheet_id: {self.sheet_id}")
         
         if not self.sheet_id:
